@@ -1,0 +1,9 @@
+modelo,max_depth,min_samples_leaf,log_loss_cv,min_child_samples,num_leaves
+random forest,12,50,0.8110134468219338,,
+random forest,12,200,0.819559214240669,,
+random forest,None,50,0.8109551426815369,,
+random forest,None,200,0.8197068321149708,,
+LightGBM,,,0.8344834786263453,100,15
+LightGBM,,,0.8604649289108393,100,31
+LightGBM,,,0.8277069310118769,400,15
+LightGBM,,,0.8420722827272673,400,31
