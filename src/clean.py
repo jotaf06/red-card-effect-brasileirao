@@ -1,3 +1,5 @@
+import re
+import unicodedata
 import warnings
 from pathlib import Path
 
@@ -8,6 +10,8 @@ RAIZ = Path(__file__).resolve().parent.parent
 RAW_DIR = RAIZ / "data" / "raw"
 INTERIM_DIR = RAIZ / "data" / "interim"
 MANUAL_POSICAO = RAIZ / "data" / "manual" / "posicao_vermelhos.csv"
+MANUAL_ARENAS = RAIZ / "data" / "manual" / "arenas.csv"
+ANOTACAO_PORTOES_FECHADOS = re.compile(r"\s*(?:\*\(PF\)|\(\*PF\))$")
 POSICOES_VALIDAS = {"Goleiro", "Zagueiro", "Meio-campo", "Atacante"}
 LIMIAR_IMPUTACAO = 0.8
 
@@ -39,8 +43,36 @@ def separar_minuto(minuto: pd.Series) -> pd.DataFrame:
     })
 
 
+def normalizar_nome_arena(nome: str) -> str:
+    texto = " ".join(unicodedata.normalize("NFKC", nome).split())
+    return ANOTACAO_PORTOES_FECHADOS.sub("", texto)
+
+
+def padronizar_arena(partidas: pd.DataFrame) -> pd.DataFrame:
+    """Une as grafias de um mesmo estádio (mesmo local físico) num nome canônico.
+
+    O valor da fonte fica em `arena_original`; `cidade_arena`/`uf_arena` vêm do
+    dicionário manual. Falha se aparecer um nome sem entrada no dicionário.
+    """
+    dicionario = pd.read_csv(MANUAL_ARENAS, keep_default_na=False)
+    if dicionario["nome_fonte"].duplicated().any():
+        raise ValueError("nome_fonte duplicado em arenas.csv")
+    p = partidas.rename(columns={"arena": "arena_original"})
+    chave = p["arena_original"].map(normalizar_nome_arena)
+    sem_mapeamento = sorted(set(chave) - set(dicionario["nome_fonte"]))
+    if sem_mapeamento:
+        raise ValueError(f"arenas sem entrada em {MANUAL_ARENAS.name}: {sem_mapeamento}")
+    canonico = dicionario.set_index("nome_fonte")
+    posicao = p.columns.get_loc("arena_original")
+    for coluna, origem in (("uf_arena", "uf"), ("cidade_arena", "cidade"), ("arena", "arena")):
+        p.insert(posicao, coluna, chave.map(canonico[origem]).replace("", pd.NA))
+    print(f"arenas: {p['arena_original'].nunique()} grafias -> {p['arena'].nunique()} estádios")
+    return p
+
+
 def limpar_partidas(bruto: pd.DataFrame) -> pd.DataFrame:
     p = bruto.rename(columns={"ID": "partida_id", "rodata": "rodada"})
+    p = padronizar_arena(p)
     p["data"] = pd.to_datetime(p["data"], format="%d/%m/%Y")
     p["temporada"] = p["data"].dt.year
     p.loc[(p["temporada"] == 2021) & (p["data"] < FIM_TEMPORADA_2020), "temporada"] = 2020
