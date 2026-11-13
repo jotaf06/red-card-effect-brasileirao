@@ -24,6 +24,9 @@ FAIXAS_FINAS = ["0–15", "16–30", "31–45", "45+", "46–60", "61–75", "76
 FAIXAS = ["0–15", "16–30", "31–45+", "46–60", "61–75", "76–90+"]
 FINA_PARA_FAIXA = [0, 1, 2, 2, 3, 4, 5, 5]
 OUTRO_LADO = {"mandante": "visitante", "visitante": "mandante"}
+# Partida usada como exemplo nos slides: Santos 3 × 1 Atlético-MG (09/09/2020),
+# goleiro do Atlético expulso aos 16' com o jogo 0 × 0.
+EXEMPLO_PARTIDA_ID = 6981
 
 
 # ---------------------------------------------------------------------------
@@ -585,6 +588,23 @@ def montar_landmarks(partidas_proc: pd.DataFrame, eventos: pd.DataFrame) -> pd.D
     return lm
 
 
+def exportar_exemplo(partidas_proc: pd.DataFrame, eventos: pd.DataFrame, estados: pd.DataFrame) -> None:
+    """Eventos e trechos da partida de exemplo, para a linha do tempo dos slides."""
+    info = partidas_proc[partidas_proc["partida_id"] == EXEMPLO_PARTIDA_ID]
+    if len(info) != 1:
+        raise ValueError(f"partida de exemplo {EXEMPLO_PARTIDA_ID} não encontrada")
+    info = info.iloc[0]
+    ev = eventos[eventos["partida_id"] == EXEMPLO_PARTIDA_ID]
+    ev = ev[["minuto", "t", "tipo", "lado", "clube", "posicao", "vermelho_tipo"]].assign(
+        data=info["data"].strftime("%d/%m/%Y"), mandante=info["mandante"], visitante=info["visitante"],
+        placar_mandante=info["mandante_Placar"], placar_visitante=info["visitante_Placar"], arena=info["arena"],
+        duracao=info["duracao_estimada"])
+    ev.to_csv(TABELAS_DIR / "exemplo_partida_eventos.csv", index=False)
+    tr = estados[estados["partida_id"] == EXEMPLO_PARTIDA_ID]
+    tr[["trecho", "inicio", "fim", "duracao", "gols_mandante", "gols_visitante", "jogadores_mandante",
+        "jogadores_visitante"]].to_csv(TABELAS_DIR / "exemplo_partida_trechos.csv", index=False)
+
+
 def main() -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     TABELAS_DIR.mkdir(parents=True, exist_ok=True)
@@ -606,6 +626,7 @@ def main() -> None:
         raise AssertionError("landmarks com valores ausentes")
 
     tabela_elo.to_csv(TABELAS_DIR / "elo_parametros.csv", index=False)
+    exportar_exemplo(partidas_proc, eventos, estados)
     verm = eventos[eventos["tipo"] == "vermelho"]
     tipos = verm["vermelho_tipo"].value_counts()
     resumo = {
@@ -618,6 +639,7 @@ def main() -> None:
         "vermelhos_90_mais": int(((verm["tempo"] == 2) & (verm["acrescimo"] > 0)).sum()),
         "vermelhos_t_restante_zero": int((verm["t_restante"] == 0).sum()),
         "partidas_2_mais_vermelhos": int((verm.groupby("partida_id").size() >= 2).sum()),
+        "landmarks_linhas": len(landmarks),
         "duracao_mediana_2014": float(partidas_proc.loc[partidas_proc["temporada"] == 2014, "duracao_estimada"].median()),
         "duracao_mediana_2024": float(partidas_proc.loc[partidas_proc["temporada"] == 2024, "duracao_estimada"].median()),
     }

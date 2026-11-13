@@ -1,0 +1,9 @@
+minuto,t,tipo,lado,clube,posicao,vermelho_tipo,data,mandante,visitante,placar_mandante,placar_visitante,arena,duracao
+16,16.0,vermelho,visitante,Atletico-MG,Goleiro,direto,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+22,22.0,gol,mandante,Santos,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+24,24.0,amarelo,visitante,Atletico-MG,Meio-campo,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+35,35.0,gol,visitante,Atletico-MG,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+39,39.0,gol,mandante,Santos,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+46,48.0,amarelo,visitante,Atletico-MG,Atacante,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+51,53.0,amarelo,mandante,Santos,Zagueiro,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+90+9,101.0,gol,mandante,Santos,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
