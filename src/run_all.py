@@ -1,4 +1,4 @@
-"""Executa o pipeline completo: download → limpeza → resumo → features → testes → modelos → avaliação → documentos Typst.
+"""Executa o pipeline completo: download → limpeza → resumo → features → testes → modelos → insights → avaliação → documentos Typst.
 
 Uso (a partir da raiz do repositório):
     python -m src.run_all            # pipeline completo
@@ -9,7 +9,7 @@ import argparse
 import shutil
 import subprocess
 
-from src import clean, download, evaluate, features, models, resumo_base, stats_tests
+from src import clean, download, evaluate, features, insights, models, resumo_base, stats_tests
 from src.clean import RAIZ
 
 DOCUMENTOS = ["presentation/relatorio.typ", "presentation/slides.typ"]
@@ -37,6 +37,7 @@ def main() -> None:
         ("features", features.main),
         ("testes de hipótese (H3, H5)", stats_tests.main),
         ("modelos do efeito (H1, H2, H4)", models.main),
+        ("insights (metas e linha de base da liga)", insights.main),
         ("comparação de modelos", evaluate.main),
     ]
     if not args.sem_docs:
