@@ -104,3 +104,14 @@
 #let fmt_ou(x, d: 3) = if x == "" or x == "nan" { "—" } else { fmt(x, d: d) }
 #let curvas_modelos = tabela("modelos_custo_curvas")
 #let curva(m, saldo, lado) = curvas_modelos.find(l => l.landmark == str(m) and l.saldo_punido == str(saldo) and l.lado_punido == lado)
+
+// Insights (src/insights.py): conversão do amarelo, linha de base da liga e metas.
+#let ins_conv = tabela("insights_conversao_amarelo")
+#let conversao(grupo) = ins_conv.find(l => l.grupo == grupo)
+#let ins_testes = tabela("insights_testes")
+#let ins_teste(prefixo) = ins_testes.find(l => l.teste.starts-with(prefixo))
+#let ins_liga = tabela("insights_liga")
+#let liga(metrica) = ins_liga.find(l => l.metrica == metrica)
+#let ins_metas = tabela("insights_metas")
+#let ins_meta(insight) = ins_metas.find(l => l.insight == insight)
+#let ins_corte = tabela("insights_corte_rebaixamento")

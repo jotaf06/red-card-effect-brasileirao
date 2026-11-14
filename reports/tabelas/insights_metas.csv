@@ -1,0 +1,4 @@
+insight,metrica,periodo_jogos,liga_media,liga_mediana,meta,regra,chance_acaso,taxa_com_11,minutos_tipicos
+I1,vermelhos_2o_amarelo_ate75,38,1.1,1.0,0.0,≤ quartil inferior da liga,0.33287108369807955,,
+I2,vermelhos_zagueiro,38,2.081818181818182,2.0,1.0,≤ quartil inferior da liga,0.3843128132295345,,
+I3,gols_sofridos_por_90_com_menos,76,1.8738738738738738,,1.478819905227228,≤ ponto médio entre a taxa da liga com 10 e com 11,0.2809043530979184,1.0837659365805818,179.0

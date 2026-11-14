@@ -356,6 +356,9 @@ def analisar_pareamento(eventos: pd.DataFrame, partidas: pd.DataFrame) -> dict:
     grupos += [(f"lado {l}", trat.index[trat["lado"] == l]) for l in ("mandante", "visitante")]
     grupos += [(f"estado {e}", trat.index[trat["estado"] == e]) for e in ("perdendo", "empatando", "vencendo")]
     grupos += [(f"tipo {t}", trat.index[trat["vermelho_tipo"] == t]) for t in ("direto", "2o_amarelo")]
+    # Recortes dos insights (no fim da lista, para não mudar a sequência aleatória dos grupos acima).
+    ate75 = trat["faixa"] <= FAIXAS.index("61–75")
+    grupos += [("até 75'", trat.index[ate75]), ("depois de 75'", trat.index[~ate75])]
     linhas = []
     for nome, idx in grupos:
         d = trat.loc[idx, "diferenca"].dropna().to_numpy()
@@ -475,6 +478,7 @@ def main() -> None:
     estado["ajuste_info"].to_csv(TABELAS_DIR / "h1_modelo_estado_ajuste.csv", index=False)
     pareamento["att"].to_csv(TABELAS_DIR / "h1_pareamento_att.csv", index=False)
     pareamento["equilibrio"].to_csv(TABELAS_DIR / "h1_pareamento_equilibrio.csv", index=False)
+    pareamento["tratados"].to_parquet(PROCESSED_DIR / "pareamento_tratados.parquet", index=False)
     gols.to_csv(TABELAS_DIR / "h1_gols_irr.csv", index=False)
     testes.to_csv(TABELAS_DIR / "h1_testes.csv", index=False)
 
