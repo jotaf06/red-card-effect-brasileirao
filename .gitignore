@@ -6,3 +6,12 @@ data/raw/
 data/interim/
 data/processed/
 .vscode
+entrega/
+
+# Só os PDFs finais vão para o repositório; as fontes ficam fora.
+presentation/*.pdf
+!presentation/artigo.pdf
+!presentation/presentation.pdf
+presentation/fonts/
+presentation/prototipo.*
+SBC_Conferences_Template*/

@@ -1,6 +1,6 @@
 // Apresentação: pitch (5 min) + parte técnica (15 min), no tema "gramado".
 // Compilar a partir da raiz:
-//   typst compile --root . --font-path presentation/fonts presentation/apresentacao.typ
+//   typst compile --root . --font-path presentation/fonts presentation/presentation.typ
 #import "dados.typ": *
 #import "tema.typ": *
 #import "graficos.typ": *
