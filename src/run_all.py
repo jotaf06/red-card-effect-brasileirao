@@ -1,4 +1,4 @@
-"""Executa o pipeline completo: download → limpeza → resumo → features → testes → modelos → insights → avaliação → documentos Typst.
+"""Executa o pipeline completo: download → limpeza → resumo → features → testes → descritiva → modelos → insights → avaliação → documentos Typst.
 
 Uso (a partir da raiz do repositório):
     python -m src.run_all            # pipeline completo
@@ -9,10 +9,12 @@ import argparse
 import shutil
 import subprocess
 
-from src import clean, download, evaluate, features, insights, models, resumo_base, stats_tests
+from src import clean, descritiva, download, evaluate, features, insights, models, resumo_base, stats_tests
 from src.clean import RAIZ
 
-DOCUMENTOS = ["presentation/relatorio.typ", "presentation/slides.typ"]
+# Só os documentos finais: o artigo e os slides. relatorio.typ fica fora do pipeline.
+DOCUMENTOS = ["presentation/artigo.typ", "presentation/presentation.typ"]
+FONTES = "presentation/fonts"  # Fira Sans, Bebas Neue e TeX Gyre (Times/Helvetica/Courier do modelo SBC)
 
 
 def compilar_documentos() -> None:
@@ -20,7 +22,7 @@ def compilar_documentos() -> None:
     if typst is None:
         raise SystemExit("typst não encontrado no PATH (use --sem-docs para pular)")
     for doc in DOCUMENTOS:
-        subprocess.run([typst, "compile", "--root", ".", doc], cwd=RAIZ, check=True)
+        subprocess.run([typst, "compile", "--root", ".", "--font-path", FONTES, doc], cwd=RAIZ, check=True)
         print(f"ok  {doc}")
 
 
@@ -36,6 +38,7 @@ def main() -> None:
         ("resumo da base", resumo_base.main),
         ("features", features.main),
         ("testes de hipótese (H3, H5)", stats_tests.main),
+        ("estatística descritiva (resultado com e sem vermelho)", descritiva.main),
         ("modelos do efeito (H1, H2, H4)", models.main),
         ("insights (metas e linha de base da liga)", insights.main),
         ("comparação de modelos", evaluate.main),
