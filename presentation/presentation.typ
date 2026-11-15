@@ -75,7 +75,7 @@
   #v(12pt)
   #text(size: 15pt)[José Felix · Rafael Anacleto]
   #v(-6pt)
-  #text(size: 13pt, fill: cor.suave)[Ciência de Dados · UFAL/IC · 2026.1]
+  #text(size: 13pt, fill: cor.suave)[Ciência de Dados · UFAL/IC · 2026.2]
 ]
 
 // ===================================================================== PITCH (5 min)

@@ -43,7 +43,7 @@ INCLUIR = [
 EXCLUIR = re.compile(r"(__pycache__|\.pyc$|prototipo\.|relatorio\.typ)")
 
 LEIAME = """Quanto custa uma expulsão? Efeito do cartão vermelho no Brasileirão Série A (2014–2024)
-José Felix e Rafael Anacleto · Ciência de Dados · UFAL/IC · 2026.1
+José Felix e Rafael Anacleto · Ciência de Dados · UFAL/IC · 2026.2
 
 documento/      artigo final (modelo SBC)
 apresentacao/   pitch (5 min) + apresentação técnica (15 min)

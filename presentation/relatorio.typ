@@ -15,7 +15,7 @@
   #text(size: 13pt)[Efeito do cartão vermelho, por minuto e contexto de jogo, no resultado das partidas do Campeonato Brasileiro Série A (2014–2024)]
   #v(0.5em)
   Relatório de andamento \
-  José Felix · Ciência de Dados · UFAL/IC · 2026.1
+  José Felix · Ciência de Dados · UFAL/IC · 2026.2
 ]
 
 #outline(title: "Sumário", indent: auto)
