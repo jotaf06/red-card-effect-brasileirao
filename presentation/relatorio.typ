@@ -243,6 +243,6 @@ A multinomial tem a menor log-loss no teste. A random forest fica próxima, com 
 
 = Estado atual e próximos passos
 
-Concluído: download, limpeza, anotação manual das posições, atributos derivados (eventos, estados, exposição, landmarks, Elo), testes de H3 e H5, modelos do efeito (H1, H2, H4) e comparação de modelos com validação temporal. Pendente: insights no formato exigido, com métricas de acompanhamento e critérios de sucesso; documento final no template SBC; dashboard com o custo da expulsão por minuto.
+Concluído: download, limpeza, anotação manual das posições, atributos derivados (eventos, estados, exposição, landmarks, Elo), testes de H3 e H5, testes descritivos brutos (`src/descritiva.py`), modelos do efeito (H1, H2, H4), comparação de modelos com validação temporal e os três insights no formato exigido, com metas pela linha de base da liga (`src/insights.py`). O documento final está em `presentation/artigo.typ`, no modelo SBC, e os slides em `presentation/presentation.typ`. Este relatório registra o andamento e não é atualizado com os insights.
 
 #bibliography("referencias.bib", style: "association-for-computing-machinery")

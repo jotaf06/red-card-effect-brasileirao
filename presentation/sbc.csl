@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Estilo de referências do modelo SBC (sbc.bst, derivado do apalike) para o Typst.
+     Citação: [Knuth 1984], [Boulic and Renault 1991], [Smith et al. 1999].
+     Lista em ordem alfabética: "Sobrenome, I. and Sobrenome, I. (ano). Título. ..."
+     Os termos ficam em inglês, como no sbc.bst, mesmo em artigos em português. -->
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0" demote-non-dropping-particle="never">
+  <info>
+    <title>SBC (sbc.bst)</title>
+    <id>sbc-bst</id>
+    <updated>2026-11-14T00:00:00+00:00</updated>
+  </info>
+  <locale>
+    <terms>
+      <term name="and">and</term>
+      <term name="et-al">et al.</term>
+      <term name="in">In</term>
+      <term name="editor"><single>editor</single><multiple>editors</multiple></term>
+      <term name="page"><single>page</single><multiple>pages</multiple></term>
+      <term name="edition">edition</term>
+      <term name="no date">n.d.</term>
+    </terms>
+  </locale>
+
+  <macro name="autor-citacao">
+    <names variable="author">
+      <name form="short" and="text" delimiter=", " et-al-min="3" et-al-use-first="1"/>
+      <substitute>
+        <names variable="editor"/>
+        <text variable="title" form="short"/>
+      </substitute>
+    </names>
+  </macro>
+  <macro name="autores">
+    <names variable="author">
+      <name and="text" delimiter=", " delimiter-precedes-last="never" name-as-sort-order="all"
+            sort-separator=", " initialize-with=". "/>
+      <substitute>
+        <names variable="editor"/>
+      </substitute>
+    </names>
+  </macro>
+  <macro name="editores">
+    <names variable="editor">
+      <name and="text" delimiter=", " delimiter-precedes-last="never" name-as-sort-order="all"
+            sort-separator=", " initialize-with=". "/>
+      <label form="long" prefix=", "/>
+    </names>
+  </macro>
+  <macro name="ano">
+    <choose>
+      <if variable="issued">
+        <date variable="issued"><date-part name="year"/></date>
+      </if>
+      <else><text term="no date"/></else>
+    </choose>
+  </macro>
+  <macro name="local-editora">
+    <group delimiter=", ">
+      <text variable="publisher"/>
+      <text variable="publisher-place"/>
+    </group>
+  </macro>
+  <macro name="acesso">
+    <choose>
+      <if variable="DOI">
+        <text variable="DOI" prefix="DOI: "/>
+      </if>
+      <else-if variable="URL">
+        <text variable="URL"/>
+      </else-if>
+    </choose>
+  </macro>
+
+  <citation et-al-min="3" et-al-use-first="1" disambiguate-add-year-suffix="true">
+    <sort>
+      <key macro="autor-citacao"/>
+      <key macro="ano"/>
+    </sort>
+    <layout prefix="[" suffix="]" delimiter=", ">
+      <group delimiter=" ">
+        <text macro="autor-citacao"/>
+        <text macro="ano"/>
+      </group>
+    </layout>
+  </citation>
+
+  <bibliography hanging-indent="true" entry-spacing="0">
+    <sort>
+      <key macro="autores"/>
+      <key macro="ano"/>
+      <key variable="title"/>
+    </sort>
+    <layout suffix=".">
+      <group delimiter=" ">
+        <text macro="autores" suffix="."/>
+        <text macro="ano" prefix="(" suffix=")."/>
+      </group>
+      <choose>
+        <!-- Livro: título em itálico. -->
+        <if type="book" match="any">
+          <group delimiter=". " prefix=" ">
+            <text variable="title" font-style="italic"/>
+            <group delimiter=", ">
+              <text macro="local-editora"/>
+              <text variable="edition" suffix=" edition"/>
+            </group>
+            <text macro="acesso"/>
+          </group>
+        </if>
+        <!-- Capítulo e trabalho em evento: "In Editores, editors, *Livro*, pages x–y. Editora". -->
+        <else-if type="chapter paper-conference" match="any">
+          <group delimiter=". " prefix=" ">
+            <text variable="title"/>
+            <group delimiter=", " prefix="In ">
+              <group delimiter=", ">
+                <text macro="editores"/>
+                <text variable="container-title" font-style="italic"/>
+              </group>
+              <group delimiter=" ">
+                <label variable="page" form="long"/>
+                <text variable="page"/>
+              </group>
+            </group>
+            <text macro="local-editora"/>
+            <text macro="acesso"/>
+          </group>
+        </else-if>
+        <!-- Artigo de periódico: "*Periódico*, vol(num):páginas". -->
+        <else-if type="article-journal article-magazine article-newspaper" match="any">
+          <group delimiter=". " prefix=" ">
+            <text variable="title"/>
+            <group delimiter=", ">
+              <text variable="container-title" font-style="italic"/>
+              <group>
+                <text variable="volume"/>
+                <text variable="issue" prefix="(" suffix=")"/>
+                <text variable="page" prefix=":"/>
+              </group>
+            </group>
+            <text macro="acesso"/>
+          </group>
+        </else-if>
+        <!-- Relatório técnico e texto para discussão. -->
+        <else-if type="report" match="any">
+          <group delimiter=". " prefix=" ">
+            <text variable="title"/>
+            <group delimiter=", ">
+              <group delimiter=" ">
+                <text variable="genre" text-case="capitalize-first"/>
+                <text variable="number"/>
+              </group>
+              <text macro="local-editora"/>
+              <text variable="authority"/>
+            </group>
+            <text macro="acesso"/>
+          </group>
+        </else-if>
+        <!-- Tese, dissertação e TCC. -->
+        <else-if type="thesis" match="any">
+          <group delimiter=". " prefix=" ">
+            <text variable="title" font-style="italic"/>
+            <group delimiter=", ">
+              <text variable="genre"/>
+              <text macro="local-editora"/>
+            </group>
+            <text macro="acesso"/>
+          </group>
+        </else-if>
+        <!-- Demais (dados, software, página web). -->
+        <else>
+          <group delimiter=". " prefix=" ">
+            <text variable="title" font-style="italic"/>
+            <text variable="container-title"/>
+            <text macro="local-editora"/>
+            <text macro="acesso"/>
+          </group>
+        </else>
+      </choose>
+    </layout>
+  </bibliography>
+</style>
