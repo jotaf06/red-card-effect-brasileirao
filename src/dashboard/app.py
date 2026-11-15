@@ -21,6 +21,7 @@ from src.dashboard.config import (
     PAGE_TITLE,
     POSICOES,
 )
+from src.dashboard.data_loader import obter_resumo_base
 from src.dashboard.tabs.tab_advisor import render_tab_advisor
 from src.dashboard.tabs.tab_models import render_tab_models
 from src.dashboard.tabs.tab_risk_monitor import render_tab_risk_monitor
@@ -99,13 +100,18 @@ def main():
             filter_mode=None,
         )
 
+        resumo = obter_resumo_base()
+        n_partidas = f"{int(resumo['partidas_2014_2024']):,}".replace(",", ".")
+        n_vermelhos = f"{int(resumo['vermelhos']):,}".replace(",", ".")
+        n_jogos_verm = f"{int(resumo['partidas_com_vermelho']):,}".replace(",", ".")
+
         st.markdown("---")
         st.markdown(
-            """
+            f"""
             <div style="font-size: 0.8rem; color: #868e96; line-height: 1.4;">
                 <b>Dataset Analisado:</b><br>
-                - 4.179 partidas (2014–2024)<br>
-                - 1.086 cartões vermelhos em 876 jogos<br>
+                - {n_partidas} partidas (2014–2024)<br>
+                - {n_vermelhos} cartões vermelhos em {n_jogos_verm} jogos<br>
                 - Minuto exato em 100% dos eventos<br>
                 - Rating Elo calibrado em 2004–2013
             </div>

@@ -4,7 +4,12 @@ import pandas as pd
 import streamlit as st
 
 from src.dashboard.config import FIGURES_DIR
-from src.dashboard.data_loader import carregar_tabela, obter_comparacao_modelos_cenario
+from src.dashboard.data_loader import (
+    carregar_tabela,
+    formatar_decimal,
+    obter_comparacao_modelos_cenario,
+    obter_irr_saldo,
+)
 
 
 def render_tab_models(minuto: float = 45.0, saldo_time: int = 0, lado_time: str = "mandante"):
@@ -73,15 +78,25 @@ def render_tab_models(minuto: float = 45.0, saldo_time: int = 0, lado_time: str 
             delta_color="off",
         )
 
+    ref_hist = teste_geral[teste_geral["modelo"] == "frequências históricas"].iloc[0]
+    mult_row = teste_geral[teste_geral["modelo"] == "logística multinomial"].iloc[0]
+    n_fmt = f"{n_amostras:,}".replace(",", ".")
+    ll_melhor = formatar_decimal(float(melhor_ll_row["log_loss"]), 4)
+    ll_hist = formatar_decimal(float(ref_hist["log_loss"]), 4)
+    ll_mult = formatar_decimal(float(mult_row["log_loss"]), 4)
+    acc_melhor = f"{formatar_decimal(float(melhor_acc_row['acuracia']) * 100, 1)}%"
+
     if filtro_valor == "todos os landmarks":
         st.info(
-            "Cenário Geral: Avaliação em todos os 20.520 marcos do teste (2022–2024). "
-            "A Logística Multinomial alcança o melhor compromisso de calibração e Log-Loss (0,8282), superando com folga o benchmark de frequências históricas (1,0661)."
+            f"Cenário Geral: Avaliação em todos os {n_fmt} marcos do teste (2022–2024). "
+            f"A {melhor_ll_row['modelo']} alcança o melhor Log-Loss ({ll_melhor}) e acurácia de {acc_melhor}, "
+            f"superando com folga o benchmark de frequências históricas ({ll_hist})."
         )
     else:
         st.success(
-            "Cenário sob Inferioridade Numérica: Avaliação focada nos 1.189 marcos com expulsão ativa. "
-            "A separabilidade do desfecho se acentua, reduzindo o Log-Loss para 0,6666 e elevando a acurácia global para 72,5%."
+            f"Cenário sob Inferioridade Numérica: Avaliação focada nos {n_fmt} marcos com expulsão ativa. "
+            f"O melhor Log-Loss cai para {ll_melhor} ({melhor_ll_row['modelo']}) e a maior acurácia chega a {acc_melhor} "
+            f"({melhor_acc_row['modelo']}; logística multinomial com Log-Loss de {ll_mult})."
         )
 
     tabela_exib = []
@@ -189,10 +204,12 @@ def render_tab_models(minuto: float = 45.0, saldo_time: int = 0, lado_time: str 
         )
 
     with col_m3:
+        irr_perd = float(obter_irr_saldo(0)["irr_perdendo_geral"])
+        pct_perd = round((irr_perd - 1.0) * 100)
         st.markdown(
-            """
+            f"""
             **3. Mitigação de Causalidade Reversa (H3):**
-            - Times que estão perdendo recebem 39% mais cartões vermelhos.
+            - Times que estão perdendo recebem {pct_perd}% mais cartões vermelhos (IRR = {irr_perd:.2f}).
             - O modelo controla explicitamente o placar no momento exato da expulsão, e o pareamento compara times com mesmo saldo, minuto e Elo.
             """
         )
