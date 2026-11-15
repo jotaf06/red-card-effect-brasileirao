@@ -57,7 +57,17 @@ def padronizar_arena(partidas: pd.DataFrame) -> pd.DataFrame:
     dicionario = pd.read_csv(MANUAL_ARENAS, keep_default_na=False)
     if dicionario["nome_fonte"].duplicated().any():
         raise ValueError("nome_fonte duplicado em arenas.csv")
+    vazios = dicionario[(dicionario.apply(lambda c: c.str.strip()) == "").any(axis=1)]
+    if not vazios.empty:
+        raise ValueError(f"campos vazios em {MANUAL_ARENAS.name}: {vazios['nome_fonte'].tolist()}")
+    locais = dicionario.groupby("arena")[["cidade", "uf"]].nunique()
+    divergentes = locais[(locais > 1).any(axis=1)].index.tolist()
+    if divergentes:
+        raise ValueError(f"estádio com mais de uma cidade/UF em {MANUAL_ARENAS.name}: {divergentes}")
     p = partidas.rename(columns={"arena": "arena_original"})
+    nulos = p["arena_original"].isna()
+    if nulos.any():
+        raise ValueError(f"{int(nulos.sum())} partidas sem arena (IDs {p.loc[nulos, 'partida_id'].tolist()[:10]})")
     chave = p["arena_original"].map(normalizar_nome_arena)
     sem_mapeamento = sorted(set(chave) - set(dicionario["nome_fonte"]))
     if sem_mapeamento:
@@ -65,7 +75,7 @@ def padronizar_arena(partidas: pd.DataFrame) -> pd.DataFrame:
     canonico = dicionario.set_index("nome_fonte")
     posicao = p.columns.get_loc("arena_original")
     for coluna, origem in (("uf_arena", "uf"), ("cidade_arena", "cidade"), ("arena", "arena")):
-        p.insert(posicao, coluna, chave.map(canonico[origem]).replace("", pd.NA))
+        p.insert(posicao, coluna, chave.map(canonico[origem]))
     print(f"arenas: {p['arena_original'].nunique()} grafias -> {p['arena'].nunique()} estádios")
     return p
 
