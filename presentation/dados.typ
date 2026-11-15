@@ -115,3 +115,11 @@
 #let ins_metas = tabela("insights_metas")
 #let ins_meta(insight) = ins_metas.find(l => l.insight == insight)
 #let ins_corte = tabela("insights_corte_rebaixamento")
+
+// Estatística descritiva bruta (src/descritiva.py).
+#let desc_grupos = tabela("descritiva_grupos")
+#let desc_grupo(g) = desc_grupos.find(l => l.grupo == g)
+#let desc_testes = tabela("descritiva_testes")
+#let desc_teste(prefixo) = desc_testes.find(l => l.teste.starts-with(prefixo))
+#let desc_estado = tabela("descritiva_resultado_por_estado")
+#let resultado_estado(estado) = desc_estado.find(l => l.estado == estado)

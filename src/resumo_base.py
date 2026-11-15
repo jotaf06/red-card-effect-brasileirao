@@ -50,6 +50,10 @@ def main() -> None:
         "posicao_manual": origem.get("manual", 0),
         "posicao_nula_final": cartoes["posicao"].isna().sum(),
         "vermelhos_posicao_nula_final": vermelhos["posicao"].isna().sum(),
+        "arenas_grafias_total": partidas["arena_original"].nunique(),
+        "arenas_estadios_total": partidas["arena"].nunique(),
+        "arenas_grafias_2014_2024": analise["arena_original"].nunique(),
+        "arenas_estadios_2014_2024": analise["arena"].nunique(),
         "pct_vitoria_mandante": round(taxas["V"], 1),
         "pct_empate": round(taxas["E"], 1),
     }

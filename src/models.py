@@ -356,20 +356,16 @@ def analisar_pareamento(eventos: pd.DataFrame, partidas: pd.DataFrame) -> dict:
     grupos += [(f"lado {l}", trat.index[trat["lado"] == l]) for l in ("mandante", "visitante")]
     grupos += [(f"estado {e}", trat.index[trat["estado"] == e]) for e in ("perdendo", "empatando", "vencendo")]
     grupos += [(f"tipo {t}", trat.index[trat["vermelho_tipo"] == t]) for t in ("direto", "2o_amarelo")]
-    # Recortes dos insights (no fim da lista, para não mudar a sequência aleatória dos grupos acima).
-    ate75 = trat["faixa"] <= FAIXAS.index("61–75")
-    grupos += [("até 75'", trat.index[ate75]), ("depois de 75'", trat.index[~ate75])]
-    linhas = []
-    for nome, idx in grupos:
+
+    def linha_att(nome: str, idx: pd.Index, gerador: np.random.Generator) -> dict:
         d = trat.loc[idx, "diferenca"].dropna().to_numpy()
-        boot = np.array([rng.choice(d, size=len(d)).mean() for _ in range(N_BOOTSTRAP)])
-        linhas.append({"grupo": nome, "n_tratados": len(d), "pontos_tratados": trat.loc[idx, "pontos"].mean(),
-                       "pontos_controles": trat.loc[idx, "pontos_controle"].mean(), "att": d.mean(),
-                       "ic95_inf": np.percentile(boot, 2.5), "ic95_sup": np.percentile(boot, 97.5),
-                       "p_valor": 2 * stats.norm.sf(abs(d.mean() / boot.std(ddof=1)))})
-    att = pd.DataFrame(linhas)
-    # O 1º vermelho em 90+ fica fora, então a última faixa vai só até 90.
-    att["grupo"] = att["grupo"].str.replace("faixa 76–90+", "faixa 76–90", regex=False)
+        boot = np.array([gerador.choice(d, size=len(d)).mean() for _ in range(N_BOOTSTRAP)])
+        return {"grupo": nome, "n_tratados": len(d), "pontos_tratados": trat.loc[idx, "pontos"].mean(),
+                "pontos_controles": trat.loc[idx, "pontos_controle"].mean(), "att": d.mean(),
+                "ic95_inf": np.percentile(boot, 2.5), "ic95_sup": np.percentile(boot, 97.5),
+                "p_valor": 2 * stats.norm.sf(abs(d.mean() / boot.std(ddof=1)))}
+
+    linhas = [linha_att(nome, idx, rng) for nome, idx in grupos]
 
     # H4: diferença de ATT mandante − visitante (bootstrap independente nos dois grupos).
     d_m = trat.loc[trat["lado"] == "mandante", "diferenca"].dropna().to_numpy()
@@ -381,6 +377,15 @@ def analisar_pareamento(eventos: pd.DataFrame, partidas: pd.DataFrame) -> dict:
                        "valor_efeito": valor, "ic95_inf": np.percentile(boot, 2.5),
                        "ic95_sup": np.percentile(boot, 97.5),
                        "p_valor": 2 * stats.norm.sf(abs(valor / boot.std(ddof=1)))}
+
+    # Recortes dos insights, com gerador próprio para não alterar os resultados acima.
+    rng_insights = np.random.default_rng(SEMENTE + 1)
+    ate75 = trat["faixa"] <= FAIXAS.index("61–75")
+    linhas += [linha_att("até 75'", trat.index[ate75], rng_insights),
+               linha_att("depois de 75'", trat.index[~ate75], rng_insights)]
+    att = pd.DataFrame(linhas)
+    # O 1º vermelho em 90+ fica fora, então a última faixa vai só até 90.
+    att["grupo"] = att["grupo"].str.replace("faixa 76–90+", "faixa 76–90", regex=False)
 
     # Equilíbrio do Elo após o pareamento (diferença padronizada).
     dp = np.sqrt((trat["elo_lado"].var() + trat["elo_controle"].var()) / 2)

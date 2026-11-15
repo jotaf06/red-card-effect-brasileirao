@@ -1,6 +1,6 @@
 // Apresentação: pitch (5 min) + parte técnica (15 min), no tema "gramado".
 // Compilar a partir da raiz:
-//   typst compile --root . --font-path presentation/fonts presentation/apresentacao.typ
+//   typst compile --root . --font-path presentation/fonts presentation/presentation.typ
 #import "dados.typ": *
 #import "tema.typ": *
 #import "graficos.typ": *
@@ -75,7 +75,7 @@
   #v(12pt)
   #text(size: 15pt)[José Felix · Rafael Anacleto]
   #v(-6pt)
-  #text(size: 13pt, fill: cor.suave)[Ciência de Dados · UFAL/IC · 2026.1]
+  #text(size: 13pt, fill: cor.suave)[Ciência de Dados · UFAL/IC · 2026.2]
 ]
 
 // ===================================================================== PITCH (5 min)

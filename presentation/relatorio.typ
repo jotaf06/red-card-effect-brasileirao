@@ -15,7 +15,7 @@
   #text(size: 13pt)[Efeito do cartão vermelho, por minuto e contexto de jogo, no resultado das partidas do Campeonato Brasileiro Série A (2014–2024)]
   #v(0.5em)
   Relatório de andamento \
-  José Felix · Ciência de Dados · UFAL/IC · 2026.1
+  José Felix · Ciência de Dados · UFAL/IC · 2026.2
 ]
 
 #outline(title: "Sumário", indent: auto)
@@ -82,6 +82,8 @@ O script `src/clean.py` lê `data/raw/`, que nunca é alterado, e grava tabelas 
 
 Restam #n("posicao_nula_final") cartões sem posição, todos amarelos: os #n("vermelhos") vermelhos têm posição (#n("vermelhos_posicao_nula_final") nulos).
 
+*Nome do estádio.* A coluna `arena` tinha #n("arenas_grafias_total") grafias para #n("arenas_estadios_total") estádios (#n("arenas_grafias_2014_2024") e #n("arenas_estadios_2014_2024") em 2014–2024). Havia espaços não separáveis no início do nome, a anotação `*(PF)` dos jogos de portões fechados de 2005–2006, abreviações e acentos inconsistentes (`R de Oliveira`, `Heriberto Hulse`) e o mesmo estádio com nome popular, oficial ou comercial (`Arena da Baixada`, `Kyocera Arena`, `Estádio Joaquim Américo Guimarães`, `Ligga Arena`). O texto é normalizado, a anotação é removida e o resultado é mapeado pelo dicionário manual `data/manual/arenas.csv` para um nome canônico, com a cidade e a UF. Conta como o mesmo estádio o mesmo local físico, mesmo após reforma ou reconstrução, como em `Machadão` e `Arena das Dunas`. O nome canônico é o popular, sem patrocínio, quando ele existe. A exceção são as arenas conhecidas pelo nome comercial desde a construção ou a reconstrução (`Allianz Parque`, que absorve `Palestra Itália` e `Parque Antártica`, `Arena MRV` e `Neo Química Arena`). O valor da fonte fica em `arena_original`, e um nome sem entrada no dicionário interrompe a execução. Jogos em estádio de outro estado não são erro: mando vendido ou estádio indisponível são comuns no futebol brasileiro.
+
 == Atributos derivados
 
 O script `src/features.py` grava as tabelas analíticas em `data/processed/`. Os números desta subseção vêm de `reports/tabelas/features_resumo.csv` e `elo_parametros.csv`.
@@ -103,7 +105,7 @@ O script `src/features.py` grava as tabelas analíticas em `data/processed/`. Os
 - O número de jogadores em campo fica entre 7 e 11, e nenhum atleta tem dois vermelhos na mesma partida.
 - A exposição de cada time soma a duração estimada da partida, e as contagens de vermelhos e gols na tabela de exposição batem com os eventos.
 
-Pendências de qualidade: padronização de nomes de arenas (168 valores distintos, ainda não verificados). A formação passou a ser usada no H5 (disponível de 2015 a 2024). O técnico continua sem uso.
+Pendências de qualidade: o técnico continua sem uso. A formação passou a ser usada no H5 (disponível de 2015 a 2024).
 
 = Estatística Descritiva e Inferência <inferencia>
 
@@ -241,6 +243,6 @@ A multinomial tem a menor log-loss no teste. A random forest fica próxima, com 
 
 = Estado atual e próximos passos
 
-Concluído: download, limpeza, anotação manual das posições, atributos derivados (eventos, estados, exposição, landmarks, Elo), testes de H3 e H5, modelos do efeito (H1, H2, H4) e comparação de modelos com validação temporal. Pendente: insights no formato exigido, com métricas de acompanhamento e critérios de sucesso; documento final no template SBC; dashboard com o custo da expulsão por minuto.
+Concluído: download, limpeza, anotação manual das posições, atributos derivados (eventos, estados, exposição, landmarks, Elo), testes de H3 e H5, testes descritivos brutos (`src/descritiva.py`), modelos do efeito (H1, H2, H4), comparação de modelos com validação temporal e os três insights no formato exigido, com metas pela linha de base da liga (`src/insights.py`). O documento final está em `presentation/artigo.typ`, no modelo SBC, e os slides em `presentation/presentation.typ`. Este relatório registra o andamento e não é atualizado com os insights.
 
 #bibliography("referencias.bib", style: "association-for-computing-machinery")
