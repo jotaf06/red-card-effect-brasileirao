@@ -1,9 +1,9 @@
-minuto,t,tipo,lado,clube,posicao,vermelho_tipo,data,mandante,visitante,placar_mandante,placar_visitante,arena,duracao
-16,16.0,vermelho,visitante,Atletico-MG,Goleiro,direto,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
-22,22.0,gol,mandante,Santos,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
-24,24.0,amarelo,visitante,Atletico-MG,Meio-campo,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
-35,35.0,gol,visitante,Atletico-MG,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
-39,39.0,gol,mandante,Santos,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
-46,48.0,amarelo,visitante,Atletico-MG,Atacante,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
-51,53.0,amarelo,mandante,Santos,Zagueiro,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
-90+9,101.0,gol,mandante,Santos,,,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0
+minuto,t,tipo,lado,clube,posicao,vermelho_tipo,tempo,minuto_base,acrescimo,gols_mandante_antes,gols_visitante_antes,jogadores_mandante_depois,jogadores_visitante_depois,saldo_lado_antes,faixa,t_restante,data,mandante,visitante,placar_mandante,placar_visitante,arena,duracao,temporada,resultado_mandante,elo_diff,faixa_rotulo
+16,16.0,vermelho,visitante,Atletico-MG,Goleiro,direto,1,16,0,0,0,11,10,0,1,85.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,16–30
+22,22.0,gol,mandante,Santos,,,1,22,0,0,0,11,10,0,1,79.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,16–30
+24,24.0,amarelo,visitante,Atletico-MG,Meio-campo,,1,24,0,1,0,11,10,-1,1,77.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,16–30
+35,35.0,gol,visitante,Atletico-MG,,,1,35,0,1,0,11,10,-1,2,66.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,31–45+
+39,39.0,gol,mandante,Santos,,,1,39,0,1,1,11,10,0,2,62.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,31–45+
+46,48.0,amarelo,visitante,Atletico-MG,Atacante,,2,46,0,2,1,11,10,-1,3,53.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,46–60
+51,53.0,amarelo,mandante,Santos,Zagueiro,,2,51,0,2,1,11,10,1,3,48.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,46–60
+90+9,101.0,gol,mandante,Santos,,,2,90,9,2,1,11,10,1,5,0.0,09/09/2020,Santos,Atletico-MG,3,1,Vila Belmiro,101.0,2020,V,28.648892796923064,76–90+

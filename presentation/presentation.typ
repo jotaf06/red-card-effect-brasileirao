@@ -6,7 +6,7 @@
 #import "graficos.typ": *
 #show: tema
 
-#set document(title: "Quanto custa uma expulsão?", author: ("José Felix", "Rafael Anacleto"))
+#set document(title: "Quanto custa uma expulsão?", author: ("José Felix", "Rafael Anacleto"), date: none)
 
 // Cores das etapas (pitch e KDD).
 #let et = (
@@ -23,6 +23,7 @@
 #let FIM = "pós-jogo"
 
 // Números usados em mais de um slide.
+#let modelos_comparados = ("sempre mandante", "frequências históricas", "Elo pré-jogo", "logística multinomial", "random forest", "LightGBM")
 #let p_aj = irr("ajustado", "estado[perdendo]")
 #let p_sa = irr("sem ajuste", "estado[perdendo]")
 #let v_aj = irr("ajustado", "estado[vencendo]")
@@ -198,7 +199,7 @@
     ], seta-kdd,
     etapa-caixa(et.aval, "Avaliação")[
       #text(..titulo-fonte, size: 34pt)[2022–24] \ #v(-12pt) teste nunca visto no treino
-      #v(2pt) 7 modelos comparados
+      #v(2pt) #modelos_comparados.len() modelos comparados
     ],
   )
   #v(10pt)
@@ -414,7 +415,7 @@
   )
   #v(12pt)
   #painel(titulo: "Decisões no caminho", c: cor.vermelho)[
-    - Ordinal → *multinomial* (AIC #fmt(estado_ajuste("ordinal").delta_aic, d: 0) pontos melhor).
+    - Elo calibrado em *2004–2013*, fora da janela: sem vazamento.
     - Nenhum corte usa o futuro: só o *1º vermelho até os 90'*.
   ]
 ]
@@ -443,8 +444,7 @@
       #table(columns: (1fr, auto, auto, auto, auto), inset: (x: 9pt, y: 8pt), align: (left, right, right, right, right),
         stroke: (x, y) => (bottom: 0.5pt + cor.borda), fill: (x, y) => if y == 0 { cor.sombra.transparentize(30%) } else { cor.painel },
         table.header(..([Modelo (teste)], [Log-loss], [RPS], [AUC], [Acurácia]).map(c => text(..rotulo-fonte, size: 12.5pt, fill: et.aval, upper(c)))),
-        ..lm("sempre mandante"), ..lm("frequências históricas"), ..lm("Elo pré-jogo"), ..lm("logística ordinal"),
-        ..lm("logística multinomial", destaque: true), ..lm("random forest"), ..lm("LightGBM"),
+        ..modelos_comparados.map(m => lm(m, destaque: m == "logística multinomial")).flatten(),
       )
     ],
     [

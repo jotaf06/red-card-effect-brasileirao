@@ -3,7 +3,8 @@
 O enunciado pede: documento final em PDF, código dos experimentos, apresentação e
 arquivos adicionais. Antes de empacotar, o script verifica:
 
-- os PDFs obrigatórios existem e são mais novos que seus .typ e que as tabelas;
+- o artigo e os slides são recompilados a partir das tabelas atuais (a data dos arquivos
+  não serve de critério: o git grava tudo no mesmo segundo ao fazer checkout);
 - o artigo tem no máximo 12 páginas;
 - o artigo não tem marcas de "Pendente" nem o "?" de métricas ausentes;
 - o código e as tabelas de resultado estão presentes.
@@ -11,7 +12,7 @@ arquivos adicionais. Antes de empacotar, o script verifica:
 Ficam de fora os dados brutos e intermediários (o pipeline baixa e recria tudo),
 ambientes virtuais, caches e arquivos de rascunho.
 
-Uso: python -m src.package_submission [--saida entrega/arquivo.zip] [--forcar]
+Uso: python -m src.package_submission [--saida entrega/arquivo.zip] [--forcar] [--sem-compilar]
 """
 import argparse
 import re
@@ -22,6 +23,7 @@ import zipfile
 from pathlib import Path
 
 from src.clean import RAIZ
+from src.run_all import compilar_documentos
 
 MAX_PAGINAS = 12
 PDFS = {
@@ -42,7 +44,7 @@ INCLUIR = [
 ]
 EXCLUIR = re.compile(r"(__pycache__|\.pyc$|prototipo\.|relatorio\.typ)")
 
-LEIAME = """Quanto custa uma expulsão? Efeito do cartão vermelho no Brasileirão Série A (2014–2024)
+README = """Quanto custa uma expulsão? Efeito do cartão vermelho no Brasileirão Série A (2014–2024)
 José Felix e Rafael Anacleto · Ciência de Dados · UFAL/IC · 2026.2
 
 documento/      artigo final (modelo SBC)
@@ -55,6 +57,9 @@ Para reproduzir, a partir de codigo/:
     venv/bin/python -m src.run_all              # baixa os dados, roda tudo e compila os PDFs (requer typst)
     venv/bin/python -m src.run_all --sem-docs   # só a análise
     venv/bin/streamlit run src/dashboard/app.py # dashboard interativo (extra)
+
+O dashboard lê codigo/reports/tabelas/, criada pelo run_all. Para abri-lo sem rodar
+o pipeline, copie extras/reports/ para codigo/reports/.
 """
 
 
@@ -75,17 +80,9 @@ def texto_pdf(caminho: Path) -> str | None:
 
 def verificar() -> list[str]:
     problemas = []
-    tabelas = list((RAIZ / "reports/tabelas").glob("*.csv"))
-    tabela_mais_nova = max(p.stat().st_mtime for p in tabelas) if tabelas else 0
     for origem in PDFS.values():
-        pdf = RAIZ / origem
-        if not pdf.exists():
+        if not (RAIZ / origem).exists():
             problemas.append(f"falta {origem} (rode python -m src.run_all)")
-            continue
-        fonte = pdf.with_suffix(".typ")
-        referencia = max(fonte.stat().st_mtime if fonte.exists() else 0, tabela_mais_nova)
-        if pdf.stat().st_mtime < referencia:
-            problemas.append(f"{origem} está desatualizado em relação ao .typ ou às tabelas")
 
     artigo = RAIZ / "presentation/artigo.pdf"
     if artigo.exists():
@@ -125,8 +122,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--saida", default="entrega/red-card-effect-brasileirao.zip")
     parser.add_argument("--forcar", action="store_true", help="empacota mesmo com problemas")
+    parser.add_argument("--sem-compilar", action="store_true", help="usa os PDFs como estão, sem recompilar")
     args = parser.parse_args()
 
+    if args.sem_compilar:
+        print("aviso: PDFs não recompilados (--sem-compilar)")
+    else:
+        compilar_documentos()
     problemas = verificar()
     for p in problemas:
         print(f"problema: {p}")
@@ -137,7 +139,7 @@ def main() -> None:
     saida.parent.mkdir(parents=True, exist_ok=True)
     itens = arquivos()
     with zipfile.ZipFile(saida, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("LEIAME.txt", LEIAME)
+        z.writestr("README.txt", README)
         for origem, destino in itens:
             z.write(origem, destino)
     tamanho = saida.stat().st_size / 1e6

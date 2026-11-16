@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-from src.clean import INTERIM_DIR, PRIMEIRA_TEMPORADA_COM_EVENTOS, RAIZ
+from src.clean import INTERIM_DIR, PRIMEIRA_TEMPORADA_COM_EVENTOS, RAIZ, RAW_DIR
 
 PROCESSED_DIR = RAIZ / "data" / "processed"
 TABELAS_DIR = RAIZ / "reports" / "tabelas"
@@ -595,11 +595,26 @@ def exportar_exemplo(partidas_proc: pd.DataFrame, eventos: pd.DataFrame, estados
         raise ValueError(f"partida de exemplo {EXEMPLO_PARTIDA_ID} não encontrada")
     info = info.iloc[0]
     ev = eventos[eventos["partida_id"] == EXEMPLO_PARTIDA_ID]
-    ev = ev[["minuto", "t", "tipo", "lado", "clube", "posicao", "vermelho_tipo"]].assign(
+    ev = ev[["minuto", "t", "tipo", "lado", "clube", "posicao", "vermelho_tipo", "tempo", "minuto_base",
+             "acrescimo", "gols_mandante_antes", "gols_visitante_antes", "jogadores_mandante_depois",
+             "jogadores_visitante_depois", "saldo_lado_antes", "faixa", "t_restante"]].assign(
         data=info["data"].strftime("%d/%m/%Y"), mandante=info["mandante"], visitante=info["visitante"],
         placar_mandante=info["mandante_Placar"], placar_visitante=info["visitante_Placar"], arena=info["arena"],
-        duracao=info["duracao_estimada"])
+        duracao=info["duracao_estimada"], temporada=info["temporada"],
+        resultado_mandante=info["resultado_mandante"], elo_diff=info["elo_diff"])
+    ev["faixa_rotulo"] = np.take(FAIXAS, ev["faixa"])
     ev.to_csv(TABELAS_DIR / "exemplo_partida_eventos.csv", index=False)
+
+    # A mesma partida como vem nos CSVs brutos, na ordem dos arquivos (figura "antes e depois" do artigo).
+    bruto = []
+    for nome, registro in (("cartoes", "cartao"), ("gols", "tipo_de_gol")):
+        d = pd.read_csv(RAW_DIR / f"campeonato-brasileiro-{nome}.csv", dtype=str, keep_default_na=False)
+        d = d[d["partida_id"] == str(EXEMPLO_PARTIDA_ID)]
+        bruto.append(pd.DataFrame({"arquivo": nome, "clube": d["clube"], "registro": d[registro],
+                                   "atleta": d["atleta"], "posicao": d.get("posicao", ""), "minuto": d["minuto"]}))
+    pd.concat(bruto).to_csv(TABELAS_DIR / "exemplo_partida_bruto_eventos.csv", index=False)
+    full = pd.read_csv(RAW_DIR / "campeonato-brasileiro-full.csv", dtype=str, keep_default_na=False)
+    full[full["ID"] == str(EXEMPLO_PARTIDA_ID)].to_csv(TABELAS_DIR / "exemplo_partida_bruto_partida.csv", index=False)
     tr = estados[estados["partida_id"] == EXEMPLO_PARTIDA_ID]
     tr[["trecho", "inicio", "fim", "duracao", "gols_mandante", "gols_visitante", "jogadores_mandante",
         "jogadores_visitante"]].to_csv(TABELAS_DIR / "exemplo_partida_trechos.csv", index=False)

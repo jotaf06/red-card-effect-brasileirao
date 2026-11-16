@@ -2,7 +2,7 @@
 //   typst compile --root . --font-path presentation/fonts presentation/artigo.typ
 // Nenhum número é digitado: todos vêm de reports/tabelas/ via dados.typ.
 #import "dados.typ": *
-#import "sbc.typ": sbc
+#import "sbc.typ": sbc, mono, sem-serifa
 
 // Marca visível para o que ainda falta (some quando não houver mais nenhuma).
 #let pendente(corpo) = box(fill: rgb("#fff3c4"), inset: (x: 3pt, y: 1pt), text(size: 10pt)[*Pendente:* #corpo])
@@ -52,7 +52,21 @@ O cliente é a comissão técnica e o departamento de análise de desempenho de 
 
 O efeito do vermelho já foi medido em outras competições. Em ligas holandesas, a chance de vitória do adversário cresce quanto mais cedo ocorre a expulsão @ridder1994. Em Copas do Mundo, o mito de que "dez jogam melhor" não se confirma @caliendo2006. Na Inglaterra, o vermelho altera as taxas de gols, e o amarelo não @titman2015. Nas copas europeias, o efeito para o visitante depende do minuto @demeyere2018. Para o Brasileirão, a literatura concentra-se na vantagem de mando @leite2024 e na previsão de resultados, e uma busca em novembro de 2026 não encontrou estudo do efeito do vermelho no resultado da Série A que considere o minuto e o placar da expulsão. Este trabalho ocupa essa lacuna com dados de onze temporadas.
 
-As hipóteses são: *H1*, o vermelho reduz os pontos do time punido, com placar, mando e força controlados; *H2*, expulsões mais cedo custam mais; *H3*, há causalidade reversa, pois quem está perdendo leva mais vermelhos; *H4*, o efeito difere entre mandante e visitante; *H5*, os vermelhos se concentram em posições específicas e no fim do jogo. A vantagem de mando ao longo do tempo, tema já coberto por @leite2024, ficou fora do escopo.
+As cinco hipóteses da análise estão na @tab:hipoteses, com o método usado para testar cada uma e a resposta encontrada. A vantagem de mando ao longo do tempo, tema já coberto por @leite2024, ficou fora do escopo.
+
+#figure(
+  text(size: 10pt, {set par(justify: false); table(columns: (auto, 1.7fr, 1fr, 1fr), align: (left + top, left + top, left + top, left + top),
+    stroke: none, inset: (x: 4pt, y: 3pt),
+    table.hline(), table.header[][*Hipótese*][*Método*][*Resposta*], table.hline(stroke: 0.5pt),
+    [*H1*], [O vermelho reduz os pontos do time punido, com placar, mando e força controlados], [pareamento e modelo de estado], [sustentada (@res-custo)],
+    [*H2*], [Expulsões mais cedo custam mais], [pareamento e modelo de estado], [em parte (@res-custo)],
+    [*H3*], [Quem está perdendo leva mais vermelhos (causalidade reversa)], [Poisson por exposição], [sustentada (@inferencia)],
+    [*H4*], [O efeito difere entre mandante e visitante], [pareamento e modelo de estado], [sem conclusão (@res-mando)],
+    [*H5*], [Os vermelhos se concentram em posições específicas e no fim do jogo], [Poisson por exposição e aderência à formação], [sustentada para o minuto; em parte para a posição (@inferencia)],
+    table.hline(),
+  )}),
+  caption: [Hipóteses, métodos e respostas],
+) <tab:hipoteses>
 
 = Base de Dados
 
@@ -72,17 +86,85 @@ A base é o conjunto _Brasileirao_Dataset_ @duque_dataset, com quatro arquivos C
   caption: [Arquivos da base bruta],
 ) <tab:arquivos>
 
-== Seleção e pré-processamento
+== Pré-processamento
 
-Entram as partidas de 2014 a 2024. As de 2003 a 2013 servem apenas para calibrar o Elo. As estatísticas de jogo (chutes, posse) ficam de fora: estão vazias antes de 2015 e em 2024 e, por serem do jogo inteiro, incluem o que aconteceu depois da expulsão, o que seria vazamento.
+O pré-processamento está em `src/clean.py` e `src/features.py`. Os arquivos brutos nunca são alterados, e um único comando (`python -m src.run_all`) refaz todas as etapas, do download às tabelas analíticas. A @tab:preproc resume as técnicas, os parágrafos seguintes detalham cada uma, e a @fig:antes-depois mostra uma partida real antes e depois do processo.
 
-O pré-processamento (`src/clean.py`) tratou seis problemas. *Minutos com acréscimo*, como `45+2`, viraram tempo, minuto-base e acréscimo, com uma chave de ordenação em que `45+3` vem antes de `46`. *Temporada* não é o ano da data: a de 2020 terminou em fevereiro de 2021. *Estatísticas zeradas* eram ausências disfarçadas, e #n("estatisticas_anuladas_total") linhas viraram nulas. *Resultado* foi derivado do placar, validado contra os gols. #if tem("arenas_grafias_total") [*Nomes de estádio* foram padronizados por um dicionário manual (#n("arenas_grafias_total") grafias para #n("arenas_estadios_total") estádios).] else [*Nomes de estádio* #pendente[incluir números do P2 após o merge.]] *Posição nos cartões* faltava em #n("posicao_nula_original") registros de 2014 a 2018: #n("posicao_imputada") herdaram a posição do atleta em outros cartões (regra de 80%) e os vermelhos restantes foram anotados à mão pela escalação. Restam #n("posicao_nula_final") cartões sem posição, todos amarelos.
+#let pp(etapa, tecnica, afetados) = (text(weight: "bold", etapa), tecnica, afetados)
+#figure(
+  text(size: 10pt, {set par(justify: false); table(columns: (auto, 1fr, auto), align: (left + top, left + top, right + top), stroke: none, inset: (x: 4pt, y: 3pt),
+    table.hline(), table.header[*Etapa*][*Técnica*][*Afetados*], table.hline(stroke: 0.5pt),
+    ..pp([Limpeza], [minuto `45+2` separado em tempo, minuto e acréscimo; texto `"55%"` convertido em número; nomes normalizados], [todos os eventos]),
+    ..pp([Ausentes], [zeros que eram ausência viram nulos], [#n("estatisticas_anuladas_total") linhas]),
+    ..pp([], [posição imputada pelo histórico do atleta e, nos vermelhos, anotada pela escalação], [#n("posicao_nula_original") cartões]),
+    ..pp([], [acréscimo não registrado, estimado por partida e temporada], [todas as partidas]),
+    ..pp([Inconsistências], [temporada pelo calendário do campeonato; resultado pelo placar; estádios por dicionário], [#n("arenas_grafias_total") → #n("arenas_estadios_total") estádios]),
+    ..pp([Integração], [quatro arquivos unidos pela partida; gols e cartões numa linha do tempo única], [#nf("eventos_linhas") eventos]),
+    ..pp([Transformação], [tipo de vermelho, trechos e exposição, _landmarks_, Elo pré-jogo], [#nf("landmarks_linhas") _landmarks_]),
+    ..pp([Seleção], [janela 2014–2024; estatísticas de jogo, técnico e estádio fora dos modelos], [#n("partidas_2014_2024") partidas]),
+    table.hline(),
+  )}),
+  caption: [Técnicas de pré-processamento aplicadas],
+) <tab:preproc>
 
-== Atributos derivados
+*Limpeza dos dados.* O minuto dos eventos vinha como texto com acréscimo (`45+2`, `90+5`). Ele foi separado em tempo de jogo, minuto-base e acréscimo, com uma chave de ordenação em que `45+3` vem antes de `46`. Posse de bola e precisão de passes, também em texto (`"55%"`), viraram números. Os nomes de estádio passaram por normalização Unicode (NFKC), que remove espaços não separáveis, e perderam a anotação `*(PF)` de jogos de portões fechados. A variante `Zagueira` foi unificada em `Zagueiro`.
 
-Gols e cartões formam uma linha do tempo de #nf("eventos_linhas") eventos, com o placar e o número de jogadores antes e depois de cada um. Um vermelho é de *2º amarelo* quando o atleta tem um amarelo anterior na partida (#nf("vermelhos_2o_amarelo") casos) e *direto* nos demais (#nf("vermelhos_direto")). A base não registra o acréscimo; a duração de cada tempo é estimada pelo maior acréscimo observado ou pela mediana da temporada, um limite inferior. Cada partida é dividida em #nf("trechos") trechos com placar e jogadores constantes, que dão a *exposição*: quantos minutos cada time passou perdendo, empatando ou vencendo, com 11 ou com 10. Os _landmarks_ são fotografias do estado da partida a cada 5 minutos (#nf("landmarks_linhas") linhas).
+*Tratamento de valores ausentes.* Três tipos de ausência foram tratados de formas diferentes.
+(i) *Ausência disfarçada:* nas estatísticas, linhas com chutes, passes e faltas todos iguais a zero não descrevem um jogo real. Essas #n("estatisticas_anuladas_total") linhas viraram nulas (#n("estatisticas_anuladas_2015_2023") delas em 2015–2023), sem perder os cartões.
+(ii) *Posição do atleta:* #n("posicao_nula_original") cartões de 2014 a 2018 vinham sem posição. Descartá-los enviesaria a H5 para os anos completos. Primeiro, #n("posicao_imputada") herdaram a posição do mesmo atleta em outros cartões, quando ela cobria ao menos 80% dos seus registros. Depois, os vermelhos que sobraram foram anotados à mão pela escalação de cada jogo (`data/manual/posicao_vermelhos.csv`). Restam #n("posicao_nula_final") cartões sem posição, todos amarelos: nenhum vermelho ficou sem posição.
+(iii) *Acréscimo:* a base não registra o acréscimo dado pelo árbitro. Ele foi estimado como o maior entre o acréscimo observado nos eventos da partida e a mediana da temporada, e a duração mediana passa de #nf("duracao_mediana_2014") minutos em 2014 para #nf("duracao_mediana_2024") em 2024. A estimativa é um limite inferior: #nf("vermelhos_t_restante_zero") vermelhos ficam com tempo restante zero.
 
-A força relativa vem de um rating Elo @hvattum2010 calculado desde 2003 só com jogos anteriores a cada partida. Os parâmetros foram escolhidos por log-loss em 2004–2013, fora da janela de análise (K = #fmt(elo_escolhido.k, d: 1), mando de #fmt(elo_escolhido.mando, d: 0) pontos), e um teste automático confirma que alterar o resultado de uma partida não muda o Elo dela nem o das anteriores.
+*Dados inconsistentes.* A *temporada* não coincide com o ano da data: a de 2020 terminou em fevereiro de 2021, e por isso ela foi definida pelo calendário do campeonato e validada com 380 jogos por edição. A coluna *vencedor* diverge do placar numa partida de 2005; o resultado (V, E, D) foi derivado do placar, que bate com a contagem de gols em todas as partidas. Os *estádios* apareciam com nomes popular, oficial e comercial e com grafias variadas (`Arena da Baixada`, `Kyocera Arena`, `Ligga Arena`). Um dicionário manual (`data/manual/arenas.csv`) leva as #n("arenas_grafias_total") grafias a #n("arenas_estadios_total") estádios, com cidade e UF, contando como o mesmo estádio o mesmo local físico. A execução é interrompida se aparecer um nome sem mapeamento, um campo vazio ou um estádio com duas cidades.
+
+*Integração.* Os quatro arquivos são unidos pelo identificador da partida, e os nomes de clubes coincidem entre eles. Gols e cartões formam uma linha do tempo única de #nf("eventos_linhas") eventos. No mesmo minuto, o gol vem antes do cartão e o amarelo antes do vermelho. Cada evento guarda o placar e o número de jogadores de cada lado antes e depois dele.
+
+*Transformação de variáveis.* A base não distingue vermelho direto de 2º amarelo. Um vermelho é de *2º amarelo* quando o atleta tem um amarelo anterior na mesma partida (#nf("vermelhos_2o_amarelo") casos), e *direto* nos demais (#nf("vermelhos_direto")). Cada partida é dividida em #nf("trechos") *trechos* com placar e jogadores constantes, que dão a *exposição*: quantos minutos cada time passou perdendo, empatando ou vencendo, com 11 ou com 10, em cada faixa de 15 minutos. Os *landmarks* fotografam o estado da partida a cada 5 minutos (#nf("landmarks_linhas") linhas), com saldo, saldo dividido pela raiz do tempo restante, tempo restante, Elo e vermelhos de cada lado. A força relativa vem de um *rating Elo* @hvattum2010 calculado desde 2003 só com jogos anteriores a cada partida. Os parâmetros foram escolhidos por log-loss em 2004–2013, fora da janela de análise (K = #fmt(elo_escolhido.k, d: 1), mando de #fmt(elo_escolhido.mando, d: 0) pontos). A variável-alvo é o resultado final e os pontos (3, 1 ou 0).
+
+*Seleção e redução de atributos.* Entram as #n("partidas_2014_2024") partidas de 2014 a 2024, as únicas com minuto de gols e cartões; as de 2003 a 2013 servem apenas para calibrar o Elo. As estatísticas de jogo (chutes, posse) ficam de fora: estão vazias antes de 2015 e em 2024 e, por serem do jogo inteiro, incluem o que aconteceu depois da expulsão, o que seria vazamento. Técnico e estádio não entram nos modelos, e a formação é usada só como referência de posições na H5. Para o efeito do vermelho, a população é o 1º vermelho de cada partida até o minuto 90 (#att_todos.n_tratados casos), um corte que usa só o minuto do vermelho, nunca o que aconteceu depois dele.
+
+*Validação.* Testes automáticos interrompem o pipeline se os gols por lado não baterem com o placar, se o placar reconstruído evento a evento divergir do final, se o número de jogadores sair do intervalo de 7 a 11, se a exposição de um time não somar a duração da partida ou se o Elo de uma partida mudar quando se altera o resultado dela.
+
+// Uma partida antes e depois do pré-processamento (tabelas exemplo_partida_* de src/features.py).
+#let exb = tabela("exemplo_partida_bruto_eventos")
+#let exr = tabela("exemplo_partida_bruto_partida").at(0)
+#let exd = tabela("exemplo_partida_eventos")
+#let exd0 = exd.at(0)
+#let cru(x) = text(font: mono, size: 8pt, if x == "" { "\"\"" } else { x })
+#let ou(x) = if x == "" { "—" } else { x }
+#let lado-nome = (mandante: "mand.", visitante: "visit.")
+#let cab(..c) = c.pos().map(x => text(weight: "bold", x))
+#let rotulo-ad(t) = align(left, text(font: sem-serifa, size: 8.5pt, weight: "bold", t))
+#figure(
+  {
+    set text(size: 8.5pt)
+    set par(justify: false, first-line-indent: 0pt)
+    set smartquote(enabled: false)
+    set align(left)
+    rotulo-ad[(a) Antes: linhas dos CSVs brutos, na ordem dos arquivos]
+    v(2pt)
+    align(left, [`full`: #cru(exr.ID) · #cru(exr.data) · #cru(exr.mandante) #cru(exr.mandante_Placar)×#cru(exr.visitante_Placar) #cru(exr.visitante) · vencedor #cru(exr.vencedor) · arena #cru(exr.arena)])
+    v(2pt)
+    table(columns: (auto, auto, auto, auto, auto), align: left, stroke: none, inset: (x: 5pt, y: 1.6pt),
+      table.hline(), table.header(..cab[Arquivo][Clube][Registro][Posição][Minuto]), table.hline(stroke: 0.4pt),
+      ..exb.map(l => (raw(l.arquivo), cru(l.clube), cru(l.registro), cru(l.posicao), cru(l.minuto))).flatten(),
+      table.hline(),
+    )
+    v(6pt)
+    rotulo-ad[(b) Depois: tabela de eventos, ordenada e com o estado do jogo]
+    v(2pt)
+    align(left, [temporada #exd0.temporada · #exd0.mandante #exd0.placar_mandante×#exd0.placar_visitante #exd0.visitante · resultado do mandante #exd0.resultado_mandante · arena #exd0.arena · diferença de Elo #fmt(exd0.elo_diff, d: 1) · duração estimada #fmt(exd0.duracao, d: 0) min])
+    v(2pt)
+    table(columns: 11, align: (x, y) => if x in (0, 1, 2, 3, 9, 10) { right } else { left }, stroke: none, inset: (x: 4pt, y: 1.6pt),
+      table.hline(), table.header(..cab[Tempo][Min.][Acr.][$t$][Evento][Lado][Posição][Vermelho][Placar antes][Jogadores][$t$ rest.]), table.hline(stroke: 0.4pt),
+      ..exd.map(l => (l.tempo, l.minuto_base, l.acrescimo, fmt(l.t, d: 0), l.tipo, lado-nome.at(l.lado), ou(l.posicao),
+        ou(l.vermelho_tipo), [#l.gols_mandante_antes–#l.gols_visitante_antes], [#l.jogadores_mandante_depois×#l.jogadores_visitante_depois],
+        fmt(l.t_restante, d: 0))).flatten(),
+      table.hline(),
+    )
+  },
+  kind: image,
+  caption: [Uma partida antes e depois do pré-processamento. Em (a), os eventos vêm em dois arquivos, fora de ordem, com o minuto em texto (`90+9`) e o estádio com o nome oficial. Em (b), formam uma linha do tempo única, com o minuto separado em tempo e acréscimo, o tempo corrido $t$, o tipo do vermelho, o placar antes do evento, os jogadores em campo depois dele e o tempo restante estimado],
+) <fig:antes-depois>
 
 = Estatística Descritiva e Inferência <inferencia>
 
@@ -110,17 +192,17 @@ Contagens brutas de vermelhos enganam, porque os times passam tempos diferentes 
 
 A população do efeito são as partidas cujo 1º vermelho ocorreu até o minuto 90 regulamentar. O corte usa só o minuto do vermelho, nunca o que aconteceu depois dele, para não criar viés de seleção. Três métodos estimam o mesmo efeito, porque cada um falha de um jeito.
 
-*Modelo de estado do jogo.* Uma regressão logística prevê vitória, empate ou derrota do mandante em cada landmark, a partir do saldo (também dividido pela raiz do tempo restante), do tempo restante, da diferença de Elo e sua interação com o tempo, e dos vermelhos de cada lado, com e sem interação com o tempo. O custo da expulsão é a variação de pontos esperados do punido, $Delta"PE" = "PE"_"com" - "PE"_"sem"$, com $"PE" = 3 P(V) + P(E)$. A logística *ordinal*, prevista no plano, supõe chances proporcionais; essa suposição foi rejeitada (AIC #fmt(estado_ajuste("ordinal").delta_aic, d: 0) pontos pior), e por isso a *multinomial* é a principal.
+*Modelo de estado do jogo.* Uma regressão logística multinomial prevê vitória, empate ou derrota do mandante em cada landmark, a partir do saldo (também dividido pela raiz do tempo restante), do tempo restante, da diferença de Elo e sua interação com o tempo, e dos vermelhos de cada lado, com e sem interação com o tempo. O custo da expulsão é a variação de pontos esperados do punido, $Delta"PE" = "PE"_"com" - "PE"_"sem"$, com $"PE" = 3 P(V) + P(E)$.
 
-*Pareamento.* Cada time expulso é comparado a até 5 times de outras partidas que, no mesmo minuto, tinham o mesmo mando e saldo (−2 a +2), ainda não tinham levado vermelho e tinham o Elo mais próximo @stuart2010. A medida é o efeito médio nos tratados (ATT) em pontos finais. O equilíbrio ficou bom: diferença padronizada de Elo de #fmt(h1_equilibrio.diferenca_padronizada_elo, d: 3). É o método mais transparente e o usado na recomendação.
+*Pareamento.* Cada time expulso é comparado a até 5 times de outras partidas que, no mesmo minuto, tinham o mesmo mando e saldo (−2 a +2), ainda não tinham levado vermelho e tinham o Elo mais próximo @stuart2010. A medida é o efeito médio do tratamento sobre os tratados (ATT) em pontos finais. O equilíbrio ficou bom: diferença padronizada de Elo de #fmt(h1_equilibrio.diferenca_padronizada_elo, d: 3). É o método mais transparente e o usado na recomendação.
 
 *Poisson de gols.* Sobre a exposição, estima a taxa de gols marcados e sofridos com um jogador a menos, controlando minuto, saldo, mando e Elo.
 
-*Modelos de comparação.* Random forest e LightGBM @ke2017 preveem o mesmo resultado com as mesmas entradas, ao lado dos baselines obrigatórios "sempre mandante" e frequências históricas, além do Elo pré-jogo. Servem para verificar se a multinomial, mais simples e interpretável, perde precisão. A implementação usa statsmodels @seabold2010 e scikit-learn @pedregosa2011.
+*Modelos de comparação.* Random forest e LightGBM @ke2017 preveem o mesmo resultado com as mesmas entradas, ao lado dos baselines obrigatórios "sempre mandante" e frequências históricas, além do Elo pré-jogo. Servem para verificar se a multinomial, mais simples e interpretável, perde precisão.
 
 = Métricas de Avaliação
 
-Para a previsão do resultado, as métricas principais avaliam *probabilidades*: log-loss, Brier e RPS (_ranked probability score_), adequado a resultados ordenados @constantinou2012. AUC um-contra-todos, acurácia e F1 macro são reportadas, mas a acurácia sozinha é enganosa, porque quase nenhum modelo prevê empates. Para o efeito, as medidas são o ATT e o $Delta"PE"$ em pontos, e a IRR para taxas, sempre com IC de 95%.
+Para a previsão do resultado, as métricas principais avaliam *probabilidades*: log-loss, Brier e RPS (_ranked probability score_), adequado a resultados ordenados @constantinou2012. AUC um-contra-todos e acurácia também são reportadas, mas a acurácia sozinha é enganosa, porque quase nenhum modelo prevê empates. Para o efeito, as medidas são o ATT e o $Delta"PE"$ em pontos, e a IRR para taxas, sempre com IC de 95%.
 
 = Métodos de Avaliação
 
@@ -128,7 +210,7 @@ Para a previsão do resultado, as métricas principais avaliam *probabilidades*:
 
 = Resultados e Discussão
 
-== Custo da expulsão (H1 e H2)
+== Custo da expulsão (H1 e H2) <res-custo>
 
 O vermelho reduz os pontos do punido em todos os métodos. No pareamento, com #att_todos.n_tratados expulsões, o ATT é #val_ic(att_todos, "att") ponto por partida (p de Holm #pfmt(h1_teste("H1 pareamento").p_holm)): os expulsos fizeram #fmt(att_todos.pontos_tratados) ponto em média, e seus pares, #fmt(att_todos.pontos_controles). No modelo de estado, um vermelho no intervalo com o jogo empatado custa #val_ic(h1m, "valor_efeito"). O efeito pareado é menor que a diferença bruta da @inferencia (#fmt(desc_teste("Mann-Whitney: pontos").dif_media)), porque parte dela vem do placar e da força de quem é expulso. *A H1 é sustentada.*
 
@@ -137,10 +219,30 @@ O vermelho reduz os pontos do punido em todos os métodos. No pareamento, com #a
 
 O custo cai ao longo do jogo (@fig:att): #val_ic(att("faixa 16–30"), "att") entre os minutos 16 e 30 e #val_ic(att("faixa 76–90"), "att") entre 76 e 90. Até os 75 minutos, o custo é #val_ic(a75, "att"), cerca de #fmt(float(a75.att) / float(d75.att), d: 0) vezes o de depois (#val_ic(d75, "att")). No modelo multinomial, porém, a diferença entre os minutos 15 e 75 não é significativa, e os primeiros 15 minutos têm só #att("faixa 0–15").n_tratados expulsões. *A H2 é sustentada em parte.*
 
-== Mando e gols (H4)
+#let est_linha(rotulo, e) = {
+  let l = resultado_estado(e)
+  ([#rotulo (#l.total)], l.derrota, l.empate, l.vitória)
+}
+#let rp = resultado_estado("perdendo")
+O resultado final também depende do placar no momento da expulsão (@tab:estado). Entre os punidos que estavam empatando, #rem.derrota de #rem.total terminaram derrotados; entre os que já perdiam, só #(int(rp.empate) + int(rp.vitória)) de #rp.total evitaram a derrota. Quem é expulso perdendo raramente se recupera, e por isso o custo pareado nesse grupo é pequeno: há pouco a perder.
+
+#figure(
+  text(size: 10pt, table(columns: (auto, auto, auto, auto), align: (left, right, right, right), stroke: none,
+    inset: (x: 8pt, y: 3pt),
+    table.hline(), table.header[*Placar no 1º vermelho*][*Derrota*][*Empate*][*Vitória*], table.hline(stroke: 0.5pt),
+    ..est_linha("empatando", "empatando"), ..est_linha("vencendo", "vencendo"), ..est_linha("perdendo", "perdendo"),
+    table.hline(),
+  )),
+  caption: [Resultado final do time punido, pelo placar no momento do 1º vermelho (até o minuto 90). Entre parênteses, o número de expulsões],
+) <tab:estado>
+
+== Mando e gols (H4) <res-mando>
 
 #let h4d = h1_teste("H4 pareamento: ATT mandante − ATT visitante")
-O mandante expulso perde #fmt(att("lado mandante").att) ponto e o visitante #fmt(att("lado visitante").att) (diferença #fmt(h4d.valor_efeito), p de Holm #pfmt(h4d.p_holm)). Parte disso é efeito teto, pois o mandante tem mais pontos a perder, e o modelo de estado não confirma a diferença: *a H4 fica sem conclusão*. Com um a menos, o time sofre gols a #com_ic(gs) vez a taxa da igualdade numérica e marca a #com_ic(gi). A expulsão pesa mais pelo que se sofre.
+O mandante expulso perde #fmt(att("lado mandante").att) ponto e o visitante #fmt(att("lado visitante").att) (diferença #fmt(h4d.valor_efeito), p de Holm #pfmt(h4d.p_holm)). Parte disso é efeito teto, pois o mandante tem mais pontos a perder, e o modelo de estado não confirma a diferença: *a H4 fica sem conclusão*. Com um a menos, o time sofre gols a #com_ic(gs) vez a taxa da igualdade numérica e marca a #com_ic(gi). A expulsão pesa mais pelo que se sofre. A @fig:gols mostra o padrão para mandante e visitante e no modelo com efeito fixo de partida, que compara o antes e o depois dentro do mesmo jogo.
+
+#figure(image("/reports/figures/h1_gols.png", width: 80%),
+  caption: [Razão de taxas de gols marcados com um jogador a menos (azul) e a mais (laranja), em relação à igualdade numérica, com IC 95%. A série "com um a mais" equivale aos gols que o time com dez sofre]) <fig:gols>
 
 == Comparação de modelos
 
@@ -151,7 +253,7 @@ O mandante expulso perde #fmt(att("lado mandante").att) ponto e o visitante #fmt
 #figure(
   table(columns: (1fr, auto, auto, auto, auto, auto), align: (left, right, right, right, right, right), stroke: none,
     table.hline(), table.header[*Modelo*][*Log-loss*][*Brier*][*RPS*][*AUC*][*Acurácia*], table.hline(stroke: 0.5pt),
-    ..("sempre mandante", "frequências históricas", "Elo pré-jogo", "logística ordinal",
+    ..("sempre mandante", "frequências históricas", "Elo pré-jogo",
        "logística multinomial", "random forest", "LightGBM").map(linha_m).flatten(),
     table.hline(),
   ),
@@ -180,4 +282,6 @@ Os dados são observacionais: o pareamento e o controle do estado reduzem o vié
 
 Em #n("partidas_2014_2024") partidas da Série A, um vermelho custa #fmt(-float(att_todos.att)) ponto ao time punido, mais quando ocorre até os 75 minutos, e pesa sobretudo nos gols sofridos. Como quem está perdendo leva mais vermelhos, esse custo só aparece corretamente com o placar no momento controlado. A comissão técnica pode agir em três frentes: proteger o advertido até os 75 minutos, decidir no intervalo sobre o zagueiro advertido e ter um plano treinado para jogar com dez. Todos os números deste artigo são gerados por um único pipeline reproduzível (`python -m src.run_all`).
 
+// Referências numa página própria (a última).
+#pagebreak()
 #bibliography("referencias.bib")

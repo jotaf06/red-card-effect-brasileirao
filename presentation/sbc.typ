@@ -39,7 +39,8 @@
   idioma: "pt",
   doc,
 ) = {
-  set document(title: titulo, author: autores.map(a => a.nome))
+  // Sem data: o PDF só muda quando o conteúdo muda (nada de diff a cada compilação).
+  set document(title: titulo, author: autores.map(a => a.nome), date: none)
   // O LaTeX põe a 1ª linha de base 12 pt (\topskip) abaixo da margem e deixa os descendentes
   // da última linha invadirem a margem inferior; o Typst mede a caixa da linha. As margens
   // compensam essa diferença, mantendo as mesmas 46 linhas por página.
