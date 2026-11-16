@@ -3,7 +3,10 @@ import streamlit as st
 
 from src.dashboard.data_loader import (
     calcular_pontos_esperados,
+    formatar_decimal as _fmt_pt,
+    formatar_p_valor,
     obter_att_pareamento,
+    obter_dados_insights,
     obter_dinamica_gols,
     predizer_probabilidades_multinomial,
 )
@@ -25,60 +28,98 @@ def render_tab_advisor(
 
     st.markdown("#### 1. Três Insights Acionáveis (Modelo Obrigatório da Disciplina)")
 
-    with st.expander("Insight 1: Zona de Risco Disciplinar e Prevenção Focalizada", expanded=True):
+    ins = obter_dados_insights()
+    metas = ins["metas"]
+    liga = ins["liga"]
+    conv = ins["conversao"]
+    testes = ins["testes"]
+    att_df = ins["att"]
+    gols_todos = ins["gols_todos"]
+    gols_fixo = ins["gols_fixo"]
+    zag_form = ins["formacao"].loc["Zagueiro"]
+    irr_perd = ins["irr_perdendo"]
+    irr_m1 = ins["irr_saldo_m1"]
+
+    a75 = att_df.loc["até 75'"]
+    d75 = att_df.loc["depois de 75'"]
+    att_todos = att_df.loc["todos"]
+    att_2o = att_df.loc["tipo 2o_amarelo"]
+    razao_75 = abs(float(a75["att"])) / abs(float(d75["att"]))
+    pct_2o_am = float(att_2o["n_tratados"]) / float(att_todos["n_tratados"]) * 100
+    m1 = metas.loc["I1"]
+
+    with st.expander("Insight 1: O Relógio — Prevenir o 2º Amarelo até os 75'", expanded=True):
         st.markdown(
-            """
-            > **Percebemos que** equipes em desvantagem no placar apresentam taxa de expulsão **39% maior** que em empate 
-            (IRR = 1,39, IC 95%: 1,19–1,64, p < 0,001), concentrada especificamente quando estão perdendo por 1 gol 
-            (IRR = 1,48, IC 95%: 1,26–1,75, p < 0,001), e que zagueiros/laterais recebem **16% mais cartões vermelhos** 
-            do que o esperado pela formação tática (razão obs/esp = 1,16, IC 95%: 1,08–1,25, p < 0,001). 
-            **Isso sugere que** a urgência do resultado gera desorganização emocional e tática, expondo os defensores 
-            a faltas de contenção de alto risco de segundo cartão amarelo no segundo tempo. 
-            **Por isso, recomendamos** a implementação do *Protocolo de Zona de Risco Disciplinar*, estabelecendo orientação 
-            obrigatória no vestiário aos defensores amarelados e sua substituição preventiva prioritária caso a equipe 
-            esteja perdendo por 1 gol até os 60 minutos de partida. 
-            **A decisão foi sustentada por** razão de taxas ajustada de Poisson (IRR = 1,48 para saldo -1) e teste de 
-            aderência binomial para defensores (p corrigido por Holm = 0,00045). 
-            **Após** uma temporada completa (38 rodadas), o sucesso da ação pode ser avaliado por **número total de expulsões 
-            sofridas na temporada** e acompanhado por **cartões amarelos recebidos por zagueiros no 2º tempo**. 
-            **A ação será considerada bem-sucedida se** a equipe limitar suas expulsões a no máximo **3 cartões vermelhos no campeonato**, 
-            representando uma redução de pelo menos 38% em relação à média histórica da Série A (4,9 vermelhos por time/ano).
+            f"""
+            > **Percebemos que** uma expulsão até os **75'** custa em média **{_fmt_pt(-float(a75['att']))} ponto esperado**
+            (ATT = {_fmt_pt(float(a75['att']))}, IC 95%: {_fmt_pt(float(a75['ic95_inf']))} a {_fmt_pt(float(a75['ic95_sup']))}),
+            **{_fmt_pt(razao_75, 1)}×** o custo de uma expulsão após os 75' (ATT = {_fmt_pt(float(d75['att']))}, IC 95%:
+            {_fmt_pt(float(d75['ic95_inf']))} a {_fmt_pt(float(d75['ic95_sup']))}), e que **{round(pct_2o_am)}%** das expulsões
+            pareadas decorrem de **2º cartão amarelo** (agravadas quando o time está perdendo: IRR = {_fmt_pt(float(irr_perd['irr']))} no geral e
+            {_fmt_pt(float(irr_m1['irr']))} com saldo -1).
+            **Isso sugere que** o atleta já advertido é o principal risco disciplinar evitável — e o minuto da partida define a gravidade do prejuízo.
+            **Por isso, recomendamos** instituir o *Protocolo de Zona de Risco até os 75'*: atletas advertidos expostos a faltas táticas de transição
+            passam a ser candidatos prioritários à substituição preventiva ou contenção direta até superar os 75 minutos.
+            **A decisão foi sustentada por** pareamento causal exato por minuto, placar, mando e Elo (ATT até 75' = {_fmt_pt(float(a75['att']))} vs após 75' = {_fmt_pt(float(d75['att']))}).
+            **Após** uma temporada completa ({int(m1['periodo_jogos'])} jogos), o sucesso da ação pode ser avaliado por **número de expulsões por 2º amarelo até os 75'**
+            (média da liga: **{_fmt_pt(float(m1['liga_media']), 1)}**, mediana **{_fmt_pt(float(m1['liga_mediana']), 0)}**) e acompanhado por **pontos perdidos estimados por expulsões**
+            (média da liga: {_fmt_pt(float(liga.loc['pontos_perdidos_estimados', 'media']))} pt/ano).
+            **A ação será considerada bem-sucedida se** a equipe não sofrer **nenhuma ({int(m1['meta'])}) expulsão por 2º amarelo até os 75'**
+            ({m1['regra']}; um time médio cumpre essa meta por acaso em {round(float(m1['chance_acaso']) * 100)}% das temporadas).
             """
         )
 
-    with st.expander("Insight 2: Reação Tática com 10 em Campo — Prioridade Defensiva", expanded=True):
+    cz_1t = float(conv.loc["zagueiro · 1º tempo", "taxa"]) * 100
+    cd_1t = float(conv.loc["demais · 1º tempo", "taxa"]) * 100
+    cz_2t = float(conv.loc["zagueiro · 2º tempo", "taxa"]) * 100
+    cd_2t = float(conv.loc["demais · 2º tempo", "taxa"]) * 100
+    tz1 = testes.loc["I2 conversão: zagueiro 1º tempo × demais 1º tempo"]
+    tz12 = testes.loc["I2 conversão: zagueiro 1º tempo × zagueiro 2º tempo"]
+    tz2 = testes.loc["I2 conversão: zagueiro 2º tempo × demais 2º tempo"]
+    m2 = metas.loc["I2"]
+
+    with st.expander("Insight 2: A Posição — Zagueiro Advertido no 1º Tempo", expanded=True):
         st.markdown(
-            """
-            > **Percebemos que** atuar com um jogador a menos reduz a taxa de gols marcados em **37%** (IRR = 0,63, IC 95%: 0,54–0,72, p < 10⁻⁹), 
-            mas eleva a taxa de gols sofridos em **53%** no modelo geral (IRR = 1,53, IC 95%: 1,39–1,67, p < 10⁻¹⁹) e em **99%** no modelo 
-            com efeito fixo intra-partida (IRR = 1,99, IC 95%: 1,73–2,30). 
-            **Isso sugere que** a punição esportiva da inferioridade numérica não decorre precipuamente da esterilidade ofensiva, 
-            mas da vulnerabilidade crítica gerada nos espaços defensivos e sobrecarga da linha de zaga. 
-            **Por isso, recomendamos** a adoção imediata do *Plano de Recomposição Defensiva*, estruturando a equipe em bloco 
-            baixo (formação 4-4-1 ou 5-3-1), fechando o corredor central e abrindo mão da pressão alta até os minutos finais da partida. 
-            **A decisão foi sustentada por** modelos de Poisson com offset de minutos de exposição e efeito fixo de partida 
-            (IRR de gols contra = 1,53 a 1,99). 
-            **Após** uma temporada (38 rodadas), o sucesso da ação pode ser avaliado por **média de pontos conquistados em partidas 
-            com expulsão própria** e acompanhado por **saldo de gols pós-expulsão por 90 minutos de inferioridade**. 
-            **A ação será considerada bem-sucedida se** a média de pontos obtidos em jogos com expulsão atingir pelo menos **1,00 ponto por jogo**, 
-            recuperando metade da perda média histórica decorrente do cartão vermelho (média observada de 0,85 pt contra 1,15 pt de controles pareados).
+            f"""
+            > **Percebemos que** um zagueiro advertido no **1º tempo** é expulso por 2º amarelo em **{_fmt_pt(cz_1t)}%** dos casos,
+            contra **{_fmt_pt(cd_1t)}%** nas demais posições (razão **{_fmt_pt(float(tz1['valor_efeito']))}×**, p de Holm {formatar_p_valor(float(tz1['p_holm']))});
+            no 2º tempo não há diferença significativa ({_fmt_pt(cz_2t)}% vs {_fmt_pt(cd_2t)}%, p {formatar_p_valor(float(tz2['p_holm']))}).
+            Além disso, zagueiros sofrem **{round((float(zag_form['razao_obs_esp']) - 1) * 100)}% mais cartões vermelhos** que o esperado pela formação tática
+            (razão obs/esp = {_fmt_pt(float(zag_form['razao_obs_esp']))}, IC 95%: {_fmt_pt(float(zag_form['ic95_inf']))}–{_fmt_pt(float(zag_form['ic95_sup']))},
+            p de Holm {formatar_p_valor(float(zag_form['p_holm']))}).
+            **Isso sugere que** o maior gargalo disciplinar ocorre ao combinar um zagueiro já amarelado com todo o 2º tempo ainda por jogar.
+            **Por isso, recomendamos** avaliar obrigatoriamente **no intervalo** a substituição ou ajuste de encaixe/cobertura do zagueiro advertido no 1º tempo,
+            aliado a treinos específicos de tempo de bote e cobertura da última linha.
+            **A decisão foi sustentada por** testes *z* de proporções com correção de Holm (1º tempo vs demais: {_fmt_pt(float(tz1['valor_efeito']))}×; 1º tempo vs 2º tempo do zagueiro: {_fmt_pt(float(tz12['valor_efeito']))}×, p {formatar_p_valor(float(tz12['p_holm']))}) e teste binomial de formação (H5).
+            **Após** uma temporada completa ({int(m2['periodo_jogos'])} jogos), o sucesso da ação pode ser avaliado por **cartões vermelhos de zagueiros na temporada**
+            (mediana da liga: **{_fmt_pt(float(m2['liga_mediana']), 0)}**, média **{_fmt_pt(float(m2['liga_media']))}**) e acompanhado por **expulsões de zagueiros advertidos no 1º tempo**
+            (liga: {_fmt_pt(cz_1t)}% em ≈ {_fmt_pt(float(liga.loc['zagueiros_advertidos_1t', 'media']), 0)} ocorrências/ano).
+            **A ação será considerada bem-sucedida se** a equipe registrar no máximo **{int(m2['meta'])} cartão vermelho de zagueiro** na temporada
+            ({m2['regra']}; chance ao acaso de {round(float(m2['chance_acaso']) * 100)}%).
             """
         )
 
-    with st.expander("Insight 3: Custo por Minuto e Janela de Substituição Preventiva", expanded=True):
+    gs = gols_todos.loc["vantagem[superior]"]
+    gi = gols_todos.loc["vantagem[inferior]"]
+    gs_ef = gols_fixo.loc["vantagem[superior]"]
+    m3 = metas.loc["I3"]
+
+    with st.expander("Insight 3: Com 10 em Campo — Prioridade Defensiva e Plano Pré-Treinado", expanded=True):
         st.markdown(
-            """
-            > **Percebemos que** o custo de uma expulsão decresce acentuadamente ao longo dos minutos de partida: expulsões ocorridas entre 
-            16–30 minutos custam em média **0,85 ponto esperado** (ATT = -0,85, IC 95%: -1,14 a -0,52, p < 10⁻⁶), caindo para **-0,46 ponto** 
-            (31–45+ min), **-0,35 ponto** (46–60 min) e apenas **-0,12 ponto** no último quarto de hora (76–90 min, IC 95%: -0,20 a -0,03). 
-            **Isso sugere que** o impacto negativo de atuar em desvantagem numérica é cumulativo no tempo restante, tornando expulsões precoces 
-            desproporcionalmente devastadoras para o desfecho da partida. 
-            **Por isso, recomendamos** instituir a diretriz técnica de substituição preventiva obrigatória para atletas advertidos com cartão amarelo 
-            até os 60 minutos de jogo, mesmo tratando-se de titulares fundamentais, priorizando volantes e laterais. 
-            **A decisão foi sustentada por** estimador de Pareamento Causal exato por minuto, saldo de gols e diferença de rating Elo (ATT = -0,85 no 1º tempo vs -0,12 no fim). 
-            **Após** uma temporada (38 rodadas), o sucesso da ação pode ser avaliado por **frequência de expulsões sofridas antes dos 60 minutos** 
-            e acompanhado por **minutos totais jogados por atletas sob advertência de cartão amarelo**. 
-            **A ação será considerada bem-sucedida se** a equipe zerar (**0 expulsões**) o número de cartões vermelhos ocorridos antes dos 60 minutos de jogo ao longo de todo o campeonato nacional.
+            f"""
+            > **Percebemos que** atuar com um jogador a menos eleva a taxa de **gols sofridos em {round((float(gs['irr']) - 1) * 100)}%**
+            (IRR = {_fmt_pt(float(gs['irr']))}, IC 95%: {_fmt_pt(float(gs['ic95_inf']))}–{_fmt_pt(float(gs['ic95_sup']))}; e IRR = {_fmt_pt(float(gs_ef['irr']))}
+            no modelo intra-partida com efeito fixo, IC 95%: {_fmt_pt(float(gs_ef['ic95_inf']))}–{_fmt_pt(float(gs_ef['ic95_sup']))}), enquanto a taxa de
+            **gols marcados cai {round((1 - float(gi['irr'])) * 100)}%** (IRR = {_fmt_pt(float(gi['irr']))}, IC 95%: {_fmt_pt(float(gi['ic95_inf']))}–{_fmt_pt(float(gi['ic95_sup']))}).
+            **Isso sugere que** a perda de pontos com 10 atletas decorre sobretudo da vulnerabilidade defensiva após a expulsão — a prioridade prática deve ser não sofrer gols.
+            **Por isso, recomendamos** adotar um *Plano Tático Pré-Treinado para Inferioridade Numérica*, preservando a linha defensiva em bloco compacto (4-4-1 ou 5-3-1),
+            abdicando de um atacante e acionando a reorganização imediatamente após o vermelho.
+            **A decisão foi sustentada por** regressões de Poisson com offset pelos minutos de exposição e modelo intra-partida com efeito fixo.
+            **Após** **2 temporadas ({int(m3['periodo_jogos'])} jogos)** *(janela necessária porque cada equipe atua em mediana apenas {_fmt_pt(float(liga.loc['minutos_com_menos', 'mediana']), 1)} min/ano com um a menos)*,
+            o sucesso da ação pode ser avaliado por **gols sofridos por 90 minutos em inferioridade numérica** (liga: **{_fmt_pt(float(m3['liga_media']))}** com 10 vs **{_fmt_pt(float(m3['taxa_com_11']))}** com 11)
+            e acompanhado por **gols marcados com um a menos**.
+            **A ação será considerada bem-sucedida se** a taxa de gols sofridos por 90' com 10 cair para no máximo **{_fmt_pt(float(m3['meta']))}**
+            ({m3['regra']}; chance ao acaso em 2 temporadas de {round(float(m3['chance_acaso']) * 100)}%).
             """
         )
 
@@ -105,14 +146,26 @@ def render_tab_advisor(
     gols = obter_dinamica_gols(lado=lado_time)
     irr_contra = gols["especifico"]["gols_contra_irr"]
 
-    alerta_txt = (
-        f"ALERTA DE SUBSTITUIÇÃO: O atleta na posição {posicao_advertida} deve ser substituído prioritariamente. "
-        f"O custo de um segundo amarelo neste momento ({d_pe:.2f} pts) compromete gravemente o resultado da partida."
-        if (minuto >= 45 and saldo_time <= 0 and posicao_advertida in ["Zagueiro", "Meio-campo"])
-        else "CONDUTA PREVENTIVA: Manter o atleta em campo com orientação expressa para evitar faltas de transição em contra-ataques adversários."
-    )
+    if posicao_advertida == "Zagueiro" and minuto <= 45:
+        alerta_txt = (
+            f"ALERTA DO INTERVALO (Insight 2): Zagueiro advertido no 1º tempo tem quase o dobro de conversão para 2º amarelo "
+            f"({_fmt_pt(cz_1t)}% vs {_fmt_pt(cd_1t)}%). Avaliar substituição ou ajuste de cobertura antes do início do 2º tempo "
+            f"(custo estimado neste cenário: {d_pe:.2f} pt)."
+        )
+    elif minuto <= 75 and saldo_time <= 0 and posicao_advertida in ["Zagueiro", "Meio-campo"]:
+        alerta_txt = (
+            f"ALERTA DE SUBSTITUIÇÃO (Insight 1): O atleta na posição {posicao_advertida} está dentro da janela de alto custo (≤ 75'). "
+            f"O custo estimado de um segundo amarelo neste momento ({d_pe:.2f} pt) recomenda troca preventiva prioritária."
+        )
+    elif minuto > 75:
+        alerta_txt = (
+            f"ORIENTAÇÃO DE RETA FINAL: Após os 75', o custo marginal médio cai para {_fmt_pt(abs(att['depois_75']['att']))} pt; "
+            "manter organização defensiva e instruir o atleta a evitar faltas táticas de segundo amarelo."
+        )
+    else:
+        alerta_txt = "CONDUTA PREVENTIVA: Manter o atleta em campo com orientação expressa para evitar faltas de transição em contra-ataques adversários."
 
-    faixa_num = att['faixa'].replace('faixa ', '')
+    faixa_num = att["faixa"].replace("faixa ", "")
 
     texto_parecer = f"""PARECER TÁTICO OPERACIONAL — COMISSÃO TÉCNICA
 Data/Hora da Simulação: Em tempo real
@@ -123,8 +176,8 @@ Atleta Monitorado: Posição {posicao_advertida}
 
 1. Diagnóstico de Risco Imediato
 - Custo Esperado de Expulsão (Delta PE): {d_pe:+.2f} pontos por partida (Modelo Multinomial ajustado).
-- Referência Histórica Pareada (ATT): {att['att']:+.2f} pontos (Faixa {faixa_num} min, IC 95%: [{att['ic95_inf']:.2f}, {att['ic95_sup']:.2f}]).
-- Impacto Defensivo: O adversário terá aumento de +{int((irr_contra - 1)*100)}% na taxa de gols marcados (IRR = {irr_contra:.2f}).
+- Referência Histórica Pareada (ATT): {att['att']:+.2f} pontos (Faixa {faixa_num} min, IC 95%: [{att['ic95_inf']:.2f}, {att['ic95_sup']:.2f}]; média até 75': {att['ate_75']['att']:+.2f} pt).
+- Impacto Defensivo: O adversário terá aumento de +{round((irr_contra - 1)*100)}% na taxa de gols marcados (IRR = {irr_contra:.2f}).
 
 2. Probabilidade de Resultados
 - Com 11 atletas: Vitória: {p_antes['P(V)']*100 if lado_time == 'mandante' else p_antes['P(D)']*100:.1f}% | Empate: {p_antes['P(E)']*100:.1f}% | Derrota: {p_antes['P(D)']*100 if lado_time == 'mandante' else p_antes['P(V)']*100:.1f}%

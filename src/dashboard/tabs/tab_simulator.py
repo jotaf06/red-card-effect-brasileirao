@@ -8,6 +8,7 @@ from src.dashboard.data_loader import (
     obter_att_pareamento,
     obter_dados_posicao,
     obter_dinamica_gols,
+    obter_irr_saldo,
     predizer_probabilidades_multinomial,
 )
 
@@ -97,7 +98,7 @@ def render_tab_simulator(
 
     with col3:
         irr_contra = gols_info["especifico"]["gols_contra_irr"]
-        pct_sofrer = int((irr_contra - 1.0) * 100)
+        pct_sofrer = round((irr_contra - 1.0) * 100)
         st.markdown(
             f"""
             <div class="metric-card-danger">
@@ -211,13 +212,28 @@ def render_tab_simulator(
             unsafe_allow_html=True,
         )
     else:
+        irr_info = obter_irr_saldo(saldo_time)
+        irr_saldo = float(irr_info["irr"])
+        var_irr = round((irr_saldo - 1.0) * 100)
+        irr_perd_geral = float(irr_info["irr_perdendo_geral"])
+        att_ate75 = abs(float(att_info["ate_75"]["att"]))
+        txt_h3 = (
+            f"Desvantagem de 1 gol eleva a taxa de expulsão em +{var_irr}% (IRR = {irr_saldo:.2f})."
+            if saldo_time == -1
+            else f"Em desvantagem geral, a taxa de expulsão sobe +{round((irr_perd_geral - 1) * 100)}% (IRR = {irr_perd_geral:.2f}; saldo -2 específico: IRR = {irr_saldo:.2f})."
+        )
+        orientacao_tempo = (
+            f"Se advertido no 1º tempo, avaliar troca no intervalo."
+            if (posicao_advertida == "Zagueiro" and minuto <= 45)
+            else f"Priorizar substituição preventiva até os 75' (custo médio na janela ≤ 75': {att_ate75:.2f} pt)."
+        )
         st.markdown(
             f"""
             <div class="alert-box-critical">
                 <b>Cenário: Perdendo a Partida (Zona de Risco Máximo)</b><br>
-                1. <b>Vulnerabilidade Crítica:</b> Desvantagem de 1 gol tem risco de expulsão 48% maior (IRR = 1,48).<br>
-                2. <b>Atleta Alvo:</b> O {posicao_advertida} amarelado tem probabilidade de expulsão de {taxa_pos:.1f}%. Substituir preventivamente antes dos 60'.<br>
-                3. <b>Paciência Estratégica:</b> Não arriscar pressão alta descoordenada; concentrar investidas ofensivas em lances de bola parada.
+                1. <b>Vulnerabilidade Crítica (H3):</b> {txt_h3}<br>
+                2. <b>Atleta Alvo:</b> O {posicao_advertida} amarelado tem conversão histórica de {taxa_pos:.2f}%. {orientacao_tempo}<br>
+                3. <b>Paciência Estratégica:</b> Não arriscar pressão alta descoordenada; buscar recuperação sem conceder faltas táticas de 2º amarelo.
             </div>
             """,
             unsafe_allow_html=True,
